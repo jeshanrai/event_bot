@@ -1,0 +1,133 @@
+/* By default, hide the printable receipt on screen */
+.printable-receipt {
+    display: none;
+}
+
+@media print {
+
+    /* Hide everything else */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Reset background and margins for print */
+    body {
+        background: white;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Only show the printable receipt and its children */
+    .printable-receipt,
+    .printable-receipt * {
+        visibility: visible;
+    }
+
+    /* Position the receipt at the top-left */
+    .printable-receipt {
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Or 80mm for thermal printers */
+        max-width: 80mm;
+        /* Standard thermal receipt width */
+        padding: 10px;
+        font-family: 'Courier New', Courier, monospace;
+        /* Monospace for alignment */
+        font-size: 12px;
+        color: black;
+    }
+
+    .receipt-header {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .receipt-header h1 {
+        font-size: 16px;
+        margin: 0 0 5px 0;
+        font-weight: bold;
+    }
+
+    .receipt-header p {
+        margin: 2px 0;
+    }
+
+    .receipt-divider {
+        text-align: center;
+        margin: 5px 0;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .receipt-details {
+        margin-bottom: 10px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2px;
+    }
+
+    .receipt-items {
+        margin-bottom: 10px;
+    }
+
+    .item-header {
+        display: flex;
+        font-weight: bold;
+        border-bottom: 1px dashed black;
+        padding-bottom: 2px;
+        margin-bottom: 4px;
+    }
+
+    .item-row {
+        display: flex;
+        margin-bottom: 2px;
+    }
+
+    .col-qty {
+        width: 15%;
+        text-align: left;
+    }
+
+    .col-item {
+        width: 60%;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .col-price {
+        width: 25%;
+        text-align: right;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2px;
+    }
+
+    .total-row {
+        font-weight: bold;
+        border-top: 1px dashed black;
+        padding-top: 4px;
+        margin-top: 4px;
+        font-size: 14px;
+    }
+
+    .receipt-footer {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 10px;
+    }
+
+    .receipt-footer p {
+        margin: 2px 0;
+    }
+}

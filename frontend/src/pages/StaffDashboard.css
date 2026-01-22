@@ -1,0 +1,134 @@
+/* Modern SaaS Restaurant Dashboard - Base Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Color Palette - Reference Design */
+    --primary: #FF8C00;
+    /* Orange for main action */
+    --primary-hover: #FF7B00;
+
+    --accent-blue: #4318FF;
+    /* Deep Blue for "New" badge/active items */
+    --accent-purple: #7B61FF;
+    /* Purple gradient elements */
+
+    --text-primary: #1B2559;
+    /* Dark Navy for headers */
+    --text-secondary: #A3AED0;
+    /* Gray for labels */
+
+    --surface: #FFFFFF;
+    --background: #F4F7FE;
+    /* Light blue-ish gray background */
+    --border: #F4F7FE;
+
+    --radius-xl: 30px;
+    /* Large radius from reference */
+    --radius-lg: 20px;
+    --radius-md: 10px;
+
+    --shadow-card: 0px 18px 40px rgba(112, 144, 176, 0.12);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+.modern-staff-dashboard {
+    height: 100vh;
+    background: var(--background);
+    font-family: 'DM Sans', 'Inter', sans-serif;
+    /* DM Sans matches the rounder reference font */
+    color: var(--text-primary);
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Main Layout - Card based */
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    width: 100%;
+    max-width: 1600px;
+    height: calc(100vh - 48px);
+    /* Full height minus padding */
+    margin: 0 auto;
+}
+
+.order-details-main {
+    height: 100%;
+    min-width: 0;
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    /* The main white card look */
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    padding: 1% 3% 1% 3%;
+}
+
+.loading-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    color: var(--accent-blue);
+    background: var(--background);
+}
+
+/* Scrollbar Styling */
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #E0E5F2;
+    border-radius: 10px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .dashboard-layout {
+        grid-template-columns: 280px 1fr;
+    }
+}
+
+/* Sidebar hidden state - full width */
+.dashboard-layout.sidebar-hidden {
+    grid-template-columns: 1fr;
+}
+
+@media (max-width: 1024px) {
+    .modern-staff-dashboard {
+        height: auto;
+        padding: 16px;
+        overflow-y: auto;
+    }
+
+    body {
+        overflow: auto;
+    }
+
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        gap: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .order-details-main {
+        min-height: 600px;
+    }
+}

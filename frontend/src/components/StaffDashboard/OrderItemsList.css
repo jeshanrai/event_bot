@@ -1,0 +1,124 @@
+.items-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    /* Connected rows */
+}
+
+.item-card {
+    display: grid;
+    grid-template-columns: 60px 2fr 0.5fr 1.5fr 0.5fr;
+    /* Image | Name | Qty | Notes | Price */
+    align-items: center;
+    padding: 0.75rem 0;
+    /* Reduced from 1.25rem */
+    background: transparent;
+    border-bottom: 1px solid #E5E7EB;
+    /* Clearer divider line */
+    gap: 1rem;
+    /* Reduced from 1.5rem */
+}
+
+.item-card:last-child {
+    border-bottom: 2px solid var(--divider);
+    /* Thicker border before total */
+}
+
+.item-image {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: #F5F5F5;
+}
+
+.item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.item-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+}
+
+.item-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.item-quantity {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.item-note {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.item-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: right;
+}
+
+.total-section {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 1rem;
+    /* Reduced from 2rem */
+    padding-top: 0.5rem;
+    border-top: none;
+    /* Ref has clean look */
+    gap: 1rem;
+}
+
+.total-amount {
+    font-size: 2rem;
+    /* Huge total as in ref */
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .item-card {
+        grid-template-columns: 50px 1fr auto;
+        grid-template-areas:
+            "img name price"
+            "img note qty";
+        gap: 0.5rem 1rem;
+    }
+
+    .item-image {
+        grid-area: img;
+    }
+
+    .item-name {
+        grid-area: name;
+    }
+
+    .item-price {
+        grid-area: price;
+    }
+
+    .item-note {
+        grid-area: note;
+    }
+
+    .item-quantity {
+        grid-area: qty;
+        text-align: right;
+    }
+}

@@ -1,0 +1,30 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files (ignore secrets)
+.env
+
+# Node / build directories
+node_modules/
+dist/
+dist-ssr/
+
+# Local files
+*.local
+
+# Editor directories and files
+.vscode/
+!.vscode/extensions.json  # Keep extensions.json tracked
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

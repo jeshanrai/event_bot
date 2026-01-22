@@ -1,0 +1,105 @@
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    font-family: var(--font-family);
+    font-weight: var(--font-weight-medium);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+/* Sizes */
+.btn--small {
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-caption);
+}
+
+.btn--medium {
+    padding: var(--spacing-3) var(--spacing-6);
+    font-size: var(--font-size-body);
+}
+
+.btn--large {
+    padding: var(--spacing-4) var(--spacing-8);
+    font-size: 1.125rem;
+}
+
+/* Primary Variant */
+.btn--primary {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:hover:not(.btn--disabled) {
+    background: var(--color-primary-dark);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.btn--primary:active:not(.btn--disabled) {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Secondary Variant */
+.btn--secondary {
+    background: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+}
+
+.btn--secondary:hover:not(.btn--disabled) {
+    background: var(--color-primary-light);
+    transform: translateY(-2px);
+}
+
+.btn--secondary:active:not(.btn--disabled) {
+    transform: translateY(0);
+}
+
+/* Danger Variant */
+.btn--danger {
+    background: var(--color-danger);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn--danger:hover:not(.btn--disabled) {
+    background: var(--color-danger-dark);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.btn--danger:active:not(.btn--disabled) {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Ghost Variant */
+.btn--ghost {
+    background: transparent;
+    color: var(--color-neutral-600);
+    border: none;
+}
+
+.btn--ghost:hover:not(.btn--disabled) {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-900);
+}
+
+.btn--ghost:active:not(.btn--disabled) {
+    background: var(--color-neutral-200);
+}
+
+/* Disabled State */
+.btn--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
