@@ -27,6 +27,17 @@ const User = {
     findAll: async () => {
         const result = await db.query('SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC');
         return result.rows;
+    },
+
+    findByRestaurant: async (restaurantId) => {
+        const query = `
+            SELECT id, username, email, role, created_at 
+            FROM users 
+            WHERE restaurant_id = $1 AND role = 'staff'
+            ORDER BY created_at DESC
+        `;
+        const result = await db.query(query, [restaurantId]);
+        return result.rows;
     }
 };
 

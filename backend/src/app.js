@@ -54,6 +54,7 @@ app.use('/api/plans', plansRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
 app.use('/api/facebook', require('./routes/facebookRoutes'));
+app.use('/api/restaurant', require('./routes/restaurantRoutes'));
 
 app.use(notFound);
 app.use(errorHandler);

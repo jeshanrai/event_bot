@@ -4,8 +4,6 @@ const {
     getDashboardKPIs,
     getAllUsers,
     getAllOrders,
-    getOrderDetails,
-    updateOrderStatus,
     getAIUsage,
     getReservations,
     getRevenueAnalytics,
@@ -27,8 +25,6 @@ router.get('/users', getAllUsers);
 
 // Orders Management
 router.get('/orders', getAllOrders);
-router.get('/orders/:orderId', getOrderDetails);
-router.put('/orders/:orderId', updateOrderStatus);
 
 // Reservations
 router.get('/reservations', getReservations);

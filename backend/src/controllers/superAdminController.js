@@ -189,70 +189,7 @@ const getAllOrders = async (req, res) => {
     }
 };
 
-// @desc    Get order details with items
-// @route   GET /api/superadmin/orders/:orderId
-// @access  Private/Superadmin
-const getOrderDetails = async (req, res) => {
-    try {
-        const { orderId } = req.params;
 
-        const orderResult = await db.query('SELECT * FROM orders WHERE id = $1', [orderId]);
-
-        if (orderResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Order not found' });
-        }
-
-        const itemsResult = await db.query(
-            'SELECT oi.*, f.name, f.category FROM order_items oi LEFT JOIN foods f ON oi.food_id = f.id WHERE oi.order_id = $1',
-            [orderId]
-        );
-
-        res.json({
-            order: orderResult.rows[0],
-            items: itemsResult.rows
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching order details', error: error.message });
-    }
-};
-
-// @desc    Update order status
-// @route   PUT /api/superadmin/orders/:orderId
-// @access  Private/Superadmin
-const updateOrderStatus = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const { status, rejectionReason } = req.body;
-
-        if (!status) {
-            return res.status(400).json({ message: 'Status is required' });
-        }
-
-        let query = 'UPDATE orders SET status = $1, updated_at = NOW()';
-        const values = [status, orderId];
-        let paramIndex = 2;
-
-        if (rejectionReason) {
-            query += `, rejection_reason = $${++paramIndex}`;
-            values.splice(paramIndex - 1, 0, rejectionReason);
-        }
-
-        query += ` WHERE id = $${++paramIndex}`;
-        values.push(orderId);
-
-        const result = await db.query(query, values);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: 'Order not found' });
-        }
-
-        res.json({ message: 'Order status updated', order: result.rows[0] });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error updating order', error: error.message });
-    }
-};
 
 // @desc    Get AI usage analytics
 // @route   GET /api/superadmin/ai-usage
@@ -498,8 +435,7 @@ module.exports = {
     getDashboardKPIs,
     getAllUsers,
     getAllOrders,
-    getOrderDetails,
-    updateOrderStatus,
+
     getAIUsage,
     getReservations,
     getRevenueAnalytics,

@@ -735,7 +735,8 @@ const toolHandlers = {
         updatedContext: {
           ...context,
           stage: 'awaiting_payment',
-          lastAction: 'pay_online'
+          lastAction: 'pay_online',
+          paymentLink: paymentLink // Store the payment link for reuse
         }
       };
 
@@ -1186,6 +1187,34 @@ async function routeIntent({ text, context, userId, interactiveReply, location }
       } else {
         await sendMessage(userId, context.platform, "Please choose: 'Stripe Online' or 'Cash'");
         return { reply: null, updatedContext: context };
+      }
+    }
+
+    // Handle "pay" or "pay now" text input when awaiting payment
+    if (context.stage === 'awaiting_payment') {
+      const paymentText = text.toLowerCase().trim();
+      if (paymentText.includes('pay') || paymentText === 'pay now' || paymentText === 'pay now 💳') {
+        // Check if we have a stored payment link
+        if (context.paymentLink) {
+          if (context.platform === 'whatsapp') {
+            await sendMessage(userId, context.platform,
+              `Here's your payment link again:\n\n${context.paymentLink}\n\nClick the link above to pay securely via Stripe! ✅`
+            );
+          } else {
+            await sendButtonMessage(
+              userId,
+              context.platform,
+              'Pay Securely',
+              'Click below to complete your payment via Stripe',
+              'Stripe Secure Payment',
+              [{ type: 'url', url: context.paymentLink, title: 'Pay Now 💳' }]
+            );
+          }
+          return { reply: null, updatedContext: context };
+        } else {
+          // No stored payment link, regenerate
+          return await toolHandlers.pay_online({}, userId, context);
+        }
       }
     }
   }

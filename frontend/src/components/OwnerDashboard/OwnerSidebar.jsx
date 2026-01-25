@@ -9,6 +9,7 @@ import {
     BarChart2,
     Users,
     Plug,
+    Settings,
     LogOut
 } from 'lucide-react';
 import './OwnerDashboard.css';
@@ -22,6 +23,7 @@ const OwnerSidebar = ({ activeFrame, onNavigate, onLogout, isOpen }) => {
         { id: 'analytics', label: 'Analytics', icon: BarChart2 },
         { id: 'staff', label: 'Staff', icon: Users },
         { id: 'connect', label: 'Connect', icon: Plug },
+        { id: 'settings', label: 'Settings', icon: Settings },
     ];
 
     return (

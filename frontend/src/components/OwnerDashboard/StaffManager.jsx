@@ -8,12 +8,25 @@ const StaffManager = () => {
     const [staffMessage, setStaffMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Mock Staff List (Ideally fetch from API)
-    const [staffList, setStaffList] = useState([
-        { id: 1, username: 'waiter_john', email: 'john@example.com', role: 'Staff' },
-        { id: 2, username: 'chef_mike', email: 'mike@example.com', role: 'Staff' },
-        { id: 3, username: 'reception_sue', email: 'sue@example.com', role: 'Staff' },
-    ]);
+    const [staffList, setStaffList] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch staff from API
+    const fetchStaff = async () => {
+        try {
+            const response = await api.get('/restaurant/staff');
+            setStaffList(response.data);
+            setIsLoading(false);
+        } catch (error) {
+            console.error('Error fetching staff:', error);
+            setIsLoading(false);
+        }
+    };
+
+    // Load staff on mount
+    React.useEffect(() => {
+        fetchStaff();
+    }, []);
 
     const handleCreateStaff = async (e) => {
         e.preventDefault();
@@ -21,8 +34,8 @@ const StaffManager = () => {
         try {
             await api.post('/auth/register-staff', staffForm);
             setStaffMessage('Staff member created successfully!');
-            // Add to local list for immediate feedback
-            setStaffList(prev => [...prev, { id: Date.now(), ...staffForm, role: 'Staff' }]);
+            // Refresh list from API to get the new staff member with correct ID and details
+            await fetchStaff();
             setStaffForm({ username: '', email: '', password: '' });
 
             setTimeout(() => setStaffMessage(''), 3000);
@@ -113,21 +126,27 @@ const StaffManager = () => {
                     </div>
 
                     <div className="staff-list">
-                        {staffList.map(member => (
-                            <div key={member.id} className="staff-item">
-                                <div className="staff-avatar">
-                                    {member.username[0].toUpperCase()}
+                        {isLoading ? (
+                            <div className="loading-state">Loading staff members...</div>
+                        ) : staffList.length === 0 ? (
+                            <div className="empty-state">No staff members found. Add one above!</div>
+                        ) : (
+                            staffList.map(member => (
+                                <div key={member.id} className="staff-item">
+                                    <div className="staff-avatar">
+                                        {member.username[0].toUpperCase()}
+                                    </div>
+                                    <div className="staff-info">
+                                        <div className="staff-name">{member.username}</div>
+                                        <div className="staff-email">{member.email}</div>
+                                    </div>
+                                    <div className="staff-role">
+                                        <Shield size={12} />
+                                        <span>{member.role}</span>
+                                    </div>
                                 </div>
-                                <div className="staff-info">
-                                    <div className="staff-name">{member.username}</div>
-                                    <div className="staff-email">{member.email}</div>
-                                </div>
-                                <div className="staff-role">
-                                    <Shield size={12} />
-                                    <span>{member.role}</span>
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
 

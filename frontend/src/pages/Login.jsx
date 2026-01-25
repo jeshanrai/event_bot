@@ -56,7 +56,7 @@ const Login = () => {
                     required
                 />
 
-                <div style={{ position: 'relative' }}>
+                <div className="input-with-icon">
                     <Input
                         label="Password"
                         type={showPassword ? "text" : "password"}
@@ -69,46 +69,22 @@ const Login = () => {
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                            position: 'absolute',
-                            right: '12px',
-                            top: '38px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--color-neutral-500)',
-                            padding: '4px',
-                            display: 'flex',
-                            alignItems: 'center'
-                        }}
+                        className="password-toggle"
+                        style={{ top: '38px' }} /* Manual adjustment for label spacing if needed, but lets rely on CSS if possible. The CSS says top 50%. Input component might have label inside or outside. Let's assume input-with-icon handles it or stick to the CSS class. Wait, CSS .password-toggle says top 50%. Input component likely includes label. The previous inline style had top: 38px. If I use .password-toggle it might be centered vertically relative to the container. Let's keep it simple. */
                     >
                         {showPassword ? '👁️' : '👁️‍🗨️'}
                     </button>
                 </div>
 
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row-reverse',
-                    alignItems: 'center',
-                    fontSize: '0.875rem',
-                    marginBottom: '1rem'
-                }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input type="checkbox" style={{ cursor: 'pointer' }} />
-                        <span>Remember me</span>
+                <div className="form-options" style={{ flexDirection: 'row-reverse' }}>
+                    <label className="checkbox-label">
+                        <input type="checkbox" className="checkbox-input" />
+                        <span className="checkbox-text">Remember me</span>
                     </label>
                 </div>
 
                 {error && (
-                    <div style={{
-                        padding: '12px',
-                        background: 'var(--color-danger-light)',
-                        color: 'var(--color-danger-dark)',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '0.875rem',
-                        border: '1px solid rgba(220, 38, 38, 0.2)',
-                        marginBottom: '1rem'
-                    }}>
+                    <div className="error-message">
                         ⚠️ {error}
                     </div>
                 )}
@@ -123,15 +99,9 @@ const Login = () => {
                     {isLoading ? 'Signing in...' : 'Sign In'}
                 </Button>
 
-                <div style={{
-                    textAlign: 'center',
-                    fontSize: '0.875rem',
-                    color: 'var(--color-neutral-600)',
-                    paddingTop: '16px',
-                    borderTop: '1px solid var(--color-neutral-200)'
-                }}>
+                <div className="auth-footer">
                     Don't have an account?{' '}
-                    <Link to="/signup" style={{ color: 'var(--color-primary)', fontWeight: '600', textDecoration: 'none' }}>
+                    <Link to="/signup" className="form-link">
                         Create Account
                     </Link>
                 </div>

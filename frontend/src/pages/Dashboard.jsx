@@ -10,6 +10,7 @@ import AISettings from '../components/OwnerDashboard/AISettings';
 import Analytics from '../components/OwnerDashboard/Analytics';
 import StaffManager from '../components/OwnerDashboard/StaffManager';
 import ConnectHub from '../components/OwnerDashboard/ConnectHub';
+import Settings from '../components/OwnerDashboard/Settings';
 import '../components/OwnerDashboard/OwnerDashboard.css';
 
 // Placeholder components for future implementation
@@ -42,6 +43,7 @@ const Dashboard = () => {
             case 'analytics': return <Analytics />;
             case 'staff': return <StaffManager />;
             case 'connect': return <ConnectHub />;
+            case 'settings': return <Settings />;
             default: return <DashboardHome />;
         }
     };

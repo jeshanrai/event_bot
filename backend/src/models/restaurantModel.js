@@ -17,6 +17,17 @@ const Restaurant = {
         const query = 'SELECT * FROM restaurants WHERE id = $1';
         const result = await db.query(query, [id]);
         return result.rows[0];
+    },
+
+    updateCurrency: async (id, currency) => {
+        const query = `
+            UPDATE restaurants 
+            SET currency = $1, updated_at = NOW()
+            WHERE id = $2
+            RETURNING *;
+        `;
+        const result = await db.query(query, [currency, id]);
+        return result.rows[0];
     }
 };
 

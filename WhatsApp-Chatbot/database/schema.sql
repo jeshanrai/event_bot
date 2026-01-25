@@ -151,3 +151,9 @@ CHECK (status IN (
     'cancelled',
     'rejected'
 ));
+
+
+-- Migration to add 'online' to payment_method check constraint
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
+ALTER TABLE orders ADD CONSTRAINT orders_payment_method_check 
+    CHECK (payment_method IN ('cash', 'esewa', 'khalti', 'fonepay', 'card', 'online'));

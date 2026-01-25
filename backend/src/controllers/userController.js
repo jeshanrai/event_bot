@@ -24,20 +24,9 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-// @desc    Get all users (Superadmin only)
-// @route   GET /api/users
-// @access  Private/Superadmin
-const getUsers = async (req, res) => {
-    try {
-        const users = await User.findAll();
-        res.json(users);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching users' });
-    }
-};
+
 
 module.exports = {
     getUserProfile,
-    getUsers,
+
 };
