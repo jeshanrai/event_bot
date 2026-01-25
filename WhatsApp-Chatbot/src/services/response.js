@@ -82,6 +82,13 @@ export async function sendButtonMessage(userId, platform, title, body, footer, b
                     payload: btn.reply.id
                 };
             }
+            if (btn.type === 'url') {
+                return {
+                    type: 'web_url',
+                    title: btn.title,
+                    url: btn.url
+                };
+            }
             return {
                 type: 'postback',
                 title: btn.title || 'Button',
