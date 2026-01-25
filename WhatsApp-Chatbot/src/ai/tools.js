@@ -162,41 +162,7 @@ export const availableTools = [
             }
         }
     },
-    {
-        type: "function",
-        function: {
-            name: "select_service_type",
-            description: "Select between 'Dine-in' or 'Delivery' service. Use without arguments to ask user, or with 'type' argument when user makes a selection.",
-            parameters: {
-                type: "object",
-                properties: {
-                    type: {
-                        type: "string",
-                        enum: ["dine_in", "delivery"],
-                        description: "The service type selected by the user"
-                    }
-                },
-                required: []
-            }
-        }
-    },
-    {
-        type: "function",
-        function: {
-            name: "provide_location",
-            description: "Provide delivery address or location. Use this when user sends their address for delivery.",
-            parameters: {
-                type: "object",
-                properties: {
-                    address: {
-                        type: "string",
-                        description: "The delivery address provided by the user"
-                    }
-                },
-                required: ["address"]
-            }
-        }
-    },
+
     {
         type: "function",
         function: {
@@ -217,18 +183,24 @@ export const availableTools = [
     {
         type: "function",
         function: {
-            name: "process_payment",
-            description: "Process payment method selection. Call with method='ONLINE' for online payment, method='CASH' for cash on delivery (COD), or method='CASH_COUNTER' for cash payment at counter (dine-in).",
+            name: "pay_online",
+            description: "Initiate online payment via Stripe. Use when user selects 'Online Payment', 'Stripe', 'Card', or says they want to pay online.",
             parameters: {
                 type: "object",
-                properties: {
-                    method: {
-                        type: "string",
-                        enum: ["ONLINE", "CASH", "CASH_COUNTER"],
-                        description: "The payment method selected by the user: 'ONLINE' for online payment, 'CASH' for cash on delivery, or 'CASH_COUNTER' for cash at counter"
-                    }
-                },
-                required: ["method"]
+                properties: {},
+                required: []
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "pay_cash_counter",
+            description: "Select Cash payment at counter (or Cash on Delivery). Use when user selects 'Cash', 'COD', or says they want to pay with cash.",
+            parameters: {
+                type: "object",
+                properties: {},
+                required: []
             }
         }
     },

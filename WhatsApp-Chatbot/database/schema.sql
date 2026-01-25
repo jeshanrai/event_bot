@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS restaurants (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+ALTER TABLE restaurants ADD COLUMN currency VARCHAR(10) DEFAULT 'AUD';
 
 -- =========================
 -- 2. AI USAGE STATS
@@ -83,7 +84,7 @@ CREATE TABLE IF NOT EXISTS orders (
         CHECK (service_type IN ('dine_in')),
 
     payment_method VARCHAR(20)
-        CHECK (payment_method IN ('cash', 'esewa', 'khalti', 'fonepay', 'card')),
+        CHECK (payment_method IN ('cash', 'esewa', 'khalti', 'fonepay', 'card', 'online')),
 
     total_amount DECIMAL(10,2) CHECK (total_amount >= 0),
     payment_verified BOOLEAN DEFAULT false,

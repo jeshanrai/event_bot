@@ -8,6 +8,11 @@
  */
 
 import db from '../db.js';
+import Stripe from 'stripe';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
  * Get menu categories or items by category
@@ -441,6 +446,65 @@ async function deleteSessionAfterOrder(userId) {
   }
 }
 
+/**
+ * Generate a Stripe Payment Link for an order
+ * @param {number} orderId - Order ID
+ * @returns {Promise<string>} - Payment URL
+ */
+async function generatePaymentLink(orderId) {
+  // 1. Get order details and items
+  const orderRes = await db.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  const order = orderRes.rows[0];
+
+  if (!order) throw new Error('Order not found');
+
+  const itemsRes = await db.query(
+    `SELECT f.name, f.price, oi.quantity 
+     FROM order_items oi 
+     JOIN foods f ON oi.food_id = f.id 
+     WHERE oi.order_id = $1`,
+    [orderId]
+  );
+
+  const lineItems = itemsRes.rows.map(item => ({
+    price_data: {
+      currency: 'npr',
+      product_data: {
+        name: item.name,
+      },
+      unit_amount: Math.round(parseFloat(item.price) * 100),
+    },
+    quantity: item.quantity,
+  }));
+
+  // Create session
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: lineItems,
+    mode: 'payment',
+    success_url: 'https://restro-bot.chotkari.com/payment/success?session_id={CHECKOUT_SESSION_ID}', // Placeholder URL
+    cancel_url: 'https://restro-bot.chotkari.com/payment/cancel',
+    metadata: {
+      orderId: orderId.toString()
+    }
+  });
+
+  return session.url;
+}
+
+/**
+ * Update order payment status (from webhook)
+ * @param {number} orderId - Order ID
+ * @param {string} status - New status (e.g. 'paid', 'confirmed')
+ * @returns {Promise<void>}
+ */
+async function updateOrderPaymentStatus(orderId, status) {
+  await db.query(
+    "UPDATE orders SET status = $1, payment_method = 'online' WHERE id = $2",
+    [status, orderId]
+  );
+}
+
 export {
   getMenu,
   getFoodById,
@@ -460,5 +524,7 @@ export {
   getCategoryImage,
   finalizeOrderFromCart,
   clearSessionCart,
-  deleteSessionAfterOrder
+  deleteSessionAfterOrder,
+  generatePaymentLink,
+  updateOrderPaymentStatus
 };

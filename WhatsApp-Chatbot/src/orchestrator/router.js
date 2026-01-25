@@ -636,14 +636,14 @@ const toolHandlers = {
         type: 'reply',
         reply: {
           id: 'pay_cash_counter',
-          title: 'Cash on Counter 💵'
+          title: 'Cash'
         }
       },
       {
         type: 'reply',
         reply: {
           id: 'pay_online',
-          title: 'Online Payment 📱'
+          title: 'Stripe Online'
         }
       }
     ];
@@ -651,8 +651,8 @@ const toolHandlers = {
     await sendButtonMessage(
       userId,
       context.platform,
-      '💳 Payment Method (Dine-in)',
-      'How would you like to pay for your dine-in order?',
+      '💳 Payment Method',
+      'How would you like to pay?',
       'Select to continue',
       buttons
     );
@@ -665,6 +665,85 @@ const toolHandlers = {
         lastAction: 'show_dine_in_payment_options'
       }
     };
+  },
+
+  // Handlers for payment selection
+  pay_cash_counter: async (args, userId, context) => {
+    // Standard confirmation flow
+    await restaurantTools.selectPayment(context.pendingOrder.orderId, 'CASH');
+
+    await sendMessage(userId, context.platform,
+      "✅ Order Confirmed! Please pay cash at the counter.\n\nThank you for choosing Momo House! 🥟"
+    );
+
+    // Clean up session
+    await restaurantTools.deleteSessionAfterOrder(userId);
+
+    return {
+      reply: null,
+      updatedContext: {
+        ...context,
+        stage: 'order_complete',
+        lastAction: 'pay_cash_counter',
+        cart: [],
+        pendingOrder: null
+      }
+    };
+  },
+
+  pay_online: async (args, userId, context) => {
+    try {
+      if (!context.pendingOrder || !context.pendingOrder.orderId) {
+        await sendMessage(userId, context.platform, "Session expired. Please order again.");
+        return await toolHandlers.show_food_menu({}, userId, context);
+      }
+
+      await sendMessage(userId, context.platform, "Generating secure payment link... ⏳");
+
+      const paymentLink = await restaurantTools.generatePaymentLink(context.pendingOrder.orderId);
+
+      const buttons = [
+        {
+          type: 'url',
+          title: 'Pay Now 💳',
+          url: paymentLink
+        }
+      ];
+
+      // Messenger supports URL buttons in Button Template.
+      // WhatsApp supports URL buttons ONLY in Template Messages (which require approval).
+      // For standard messages, we send the link as text.
+
+      if (context.platform === 'whatsapp') {
+        await sendMessage(userId, context.platform,
+          `Click the link below to pay securely via Stripe:\n\n${paymentLink}\n\nWe will confirm your order automatically once paid! ✅`
+        );
+      } else {
+        // Messenger can use buttons
+        await sendButtonMessage(
+          userId,
+          context.platform,
+          'Pay Securely',
+          'Click below to complete your payment via Stripe',
+          'Stripe Secure Payment',
+          [{ type: 'url', url: paymentLink, title: 'Pay Now 💳' }]
+        );
+      }
+
+      return {
+        reply: null,
+        updatedContext: {
+          ...context,
+          stage: 'awaiting_payment',
+          lastAction: 'pay_online'
+        }
+      };
+
+    } catch (error) {
+      console.error('Error generating payment link:', error);
+      await sendMessage(userId, context.platform, "Sorry, I couldn't generate the payment link. Please try paying with Cash.");
+      return await toolHandlers.show_dine_in_payment_options({}, userId, context);
+    }
   },
 
   // New Handler: Welcome Message
@@ -726,11 +805,25 @@ const toolHandlers = {
         // Set default service type to 'dine_in'
         context.service_type = 'dine_in';
 
+        // Create order in DB first to get ID
+        const finalOrder = await restaurantTools.finalizeOrderFromCart(userId, cart, {
+          service_type: 'dine_in',
+          payment_method: null // Not selected yet
+        });
+
+        // Store order details in context
+        context.pendingOrder = {
+          orderId: finalOrder.id,
+          items: cart,
+          total: finalOrder.total_amount
+        };
+
         // Show payment options directly
         return await toolHandlers.show_dine_in_payment_options({}, userId, {
           ...context,
           service_type: 'dine_in',
-          stage: 'selecting_payment'
+          stage: 'selecting_payment',
+          pendingOrder: context.pendingOrder
         });
 
       } catch (error) {
@@ -814,147 +907,10 @@ const toolHandlers = {
   },
 
 
-  // Process payment selection - saves to DATABASE
-  process_payment: async (args, userId, context) => {
-    const { method } = args;
-    const cart = context.cart || [];
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const serviceType = context.service_type || 'delivery';
-    const isDineIn = serviceType === 'dine_in';
 
-    try {
-      // Create order from cart only when payment is confirmed
-      // This ensures order is placed only after complete flow
-      let orderId = null;
-
-      if (cart.length > 0) {
-        console.log('🔄 Creating order after payment confirmation...');
-
-        const order = await restaurantTools.finalizeOrderFromCart(userId, cart, {
-          service_type: serviceType,
-          delivery_address: context.delivery_address,
-          payment_method: method,
-          platform: context.platform || 'whatsapp'
-        });
-
-        orderId = order.id;
-        console.log('✅ Order created successfully:', orderId, 'Total:', order.total_amount);
-
-        // Update payment method for the order
-        if (orderId) {
-          await restaurantTools.selectPayment(orderId, method);
-        }
-      }
-
-      if (method === 'ONLINE') {
-        // Show online payment details with dummy values
-        await sendMessage(userId, context.platform,
-          `💳 *Online Payment Details*\n\n` +
-          `━━━━━━━━━━━━━━━━━━━━━\n` +
-          `📱 *eSewa*\n` +
-          `   ID: 9800000001\n` +
-          `   Name: Momo House Pvt Ltd\n\n` +
-          `📱 *Khalti*\n` +
-          `   ID: 9800000002\n` +
-          `   Name: Momo House\n\n` +
-          `🏦 *Bank Transfer*\n` +
-          `   Bank: Nepal Bank Ltd\n` +
-          `   A/C: 0123456789012\n` +
-          `   Name: Momo House Pvt Ltd\n` +
-          `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-          `💰 *Amount to Pay: Rs.${total}*\n\n` +
-          `📝 Please send payment screenshot to confirm.\n` +
-          `Order ID: #${orderId || 'MH' + Date.now().toString().slice(-6)}`
-        );
-
-        if (isDineIn) {
-          await sendMessage(userId, context.platform,
-            `✅ Order Placed!\n\n` +
-            `Your order will be prepared once payment is confirmed.\n\n` +
-            `🍽️ Please come to our restaurant to enjoy your meal!\n\n` +
-            `Preparation time: 15-20 minutes.\n\n` +
-            `Thank you for ordering! 🥟`
-          );
-        } else {
-          await sendMessage(userId, context.platform,
-            `✅ Order Placed!\n\n` +
-            `Your order will be prepared once payment is confirmed.\n\n` +
-            `🛵 Delivery: 30-40 minutes after confirmation.\n\n` +
-            `Thank you for ordering! 🥟`
-          );
-        }
-      } else {
-        // Cash payment (at counter for dine-in, on delivery for delivery)
-        if (isDineIn) {
-          await sendMessage(userId, context.platform,
-            `✅ Order Confirmed!\n\n` +
-            `💳 Payment: Cash on Counter\n` +
-            `💰 Amount: Rs.${total}\n\n` +
-            `Your delicious food is being prepared!\n\n` +
-            `🍽️ Please come to our restaurant and pay at the counter.\n\n` +
-            `Order ID: #${orderId || 'MH' + Date.now().toString().slice(-6)}\n\n` +
-            `Preparation time: 15-20 minutes.\n\n` +
-            `Enjoy your meal! 🥟`
-          );
-        } else {
-          await sendMessage(userId, context.platform,
-            `✅ Order Confirmed!\n\n` +
-            `💳 Payment: Cash on Delivery\n` +
-            `💰 Amount: Rs.${total}\n\n` +
-            `Your delicious food is being prepared and will be delivered in 30-40 minutes.\n\n` +
-            `Order ID: #${orderId || 'MH' + Date.now().toString().slice(-6)}\n\n` +
-            `Please keep Rs.${total} ready!\n\nEnjoy your meal! 🥟`
-          );
-        }
-      }
-
-      // Delete session after successful order placement
-      try {
-        await restaurantTools.deleteSessionAfterOrder(userId);
-      } catch (deleteError) {
-        console.error('Warning: Could not delete session:', deleteError);
-        // Don't fail the order if session deletion fails
-      }
-
-      return {
-        reply: null,
-        updatedContext: {
-          ...context,
-          stage: 'order_complete',
-          lastAction: 'order_confirmed',
-          payment_method: null,
-          cart: [],
-          service_type: null,
-          number_of_people: null,
-          dine_time: null,
-          delivery_address: null
-        }
-      };
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      await sendMessage(userId, context.platform, "Order confirmed! We'll contact you for payment details.");
-
-      // Don't delete session if order creation failed
-      return {
-        reply: null,
-        updatedContext: {
-          stage: 'order_complete',
-          cart: [],
-          service_type: null,
-          number_of_people: null,
-          dine_time: null,
-          delivery_address: null,
-          payment_method: null
-        }
-      };
-    }
-  },
 
   // Handler for cash at counter (Dine-in)
-  pay_cash_counter: async (args, userId, context) => {
-    // Just reuse process_payment with CASH method
-    return await toolHandlers.process_payment({ method: 'CASH_COUNTER' }, userId, context);
-  },
+
 
   // Show order history
   show_order_history: async (args, userId, context) => {
@@ -1188,7 +1144,7 @@ async function routeIntent({ text, context, userId, interactiveReply, location }
     }
 
     if (id === 'pay_online') {
-      return await toolHandlers.process_payment({ method: 'ONLINE' }, userId, context);
+      return await toolHandlers.pay_online({}, userId, context);
     }
     // Handle dine-in cash payment
     if (id === 'pay_cash_counter') {
@@ -1223,12 +1179,12 @@ async function routeIntent({ text, context, userId, interactiveReply, location }
     // Handle payment method selection via text
     if (context.stage === 'selecting_payment') {
       const paymentText = text.toLowerCase();
-      if (paymentText.includes('online') || paymentText.includes('online payment') || paymentText.includes('esewa') || paymentText.includes('khalti')) {
-        return await toolHandlers.process_payment({ method: 'ONLINE' }, userId, context);
-      } else if (paymentText.includes('cash') || paymentText.includes('cod') || paymentText.includes('cash on delivery')) {
-        return await toolHandlers.process_payment({ method: 'CASH' }, userId, context);
+      if (paymentText.includes('online') || paymentText.includes('stripe') || paymentText.includes('card')) {
+        return await toolHandlers.pay_online({}, userId, context);
+      } else if (paymentText.includes('cash') || paymentText.includes('cod') || paymentText.includes('counter')) {
+        return await toolHandlers.pay_cash_counter({}, userId, context);
       } else {
-        await sendMessage(userId, context.platform, "Please choose: 'Online Payment' or 'Cash on Delivery'");
+        await sendMessage(userId, context.platform, "Please choose: 'Stripe Online' or 'Cash'");
         return { reply: null, updatedContext: context };
       }
     }

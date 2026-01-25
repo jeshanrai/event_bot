@@ -4,8 +4,11 @@ import messengerWebhook from './webhooks/messenger.js';
 import { handleIncomingMessage } from './orchestrator/index.js';
 import db from './db.js';
 import dotenv from 'dotenv';
+import Stripe from 'stripe';
 
 dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 app.use(express.json());
@@ -265,6 +268,44 @@ app.get('/messenger-webhook', (req, res) => {
 app.post('/messenger-webhook', async (req, res) => {
   console.log('\n🟦 [MESSENGER WEBHOOK] POST /messenger-webhook');
   return messengerWebhook(req, res);
+});
+
+/* ======================
+   STRIPE WEBHOOK ENDPOINTS
+   Endpoint for Stripe Payment Events
+====================== */
+
+app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event; // Defines 'event' variable
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error(`❌ Stripe Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const orderId = session.metadata.orderId;
+
+    console.log(`💰 Payment received for Order #${orderId}`);
+
+    try {
+      // Update order status in database
+      await db.query(
+        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1",
+        [orderId]
+      );
+      console.log(`✅ Order #${orderId} marked as confirmed/online`);
+    } catch (error) {
+      console.error(`❌ Error updating order #${orderId}:`, error);
+    }
+  }
+
+  res.send();
 });
 
 /* ======================
