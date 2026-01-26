@@ -275,6 +275,10 @@ app.post('/messenger-webhook', async (req, res) => {
    Endpoint for Stripe Payment Events
 ====================== */
 
+// Import sendMessage
+import { sendMessage } from './services/response.js';
+import { updateContext } from './orchestrator/context.js';
+
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event; // Defines 'event' variable
@@ -294,12 +298,36 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
     console.log(`💰 Payment received for Order #${orderId}`);
 
     try {
-      // Update order status in database
-      await db.query(
-        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1",
+      // 1. Update order status in database
+      const orderResult = await db.query(
+        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1 RETURNING customer_id, platform",
         [orderId]
       );
       console.log(`✅ Order #${orderId} marked as confirmed/online`);
+
+      // 2. Notify the user
+      if (orderResult.rows.length > 0) {
+        const { customer_id: userId, platform } = orderResult.rows[0];
+
+        if (userId && platform) {
+          await sendMessage(
+            userId,
+            platform,
+            `✅ Payment Received!\n\nYour order #${orderId} has been confirmed. We'll verify it shortly and start preparing your food! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`
+          );
+
+          // 3. Clear/Reset User Context
+          // This ensures they don't get stuck in the 'awaiting_payment' stage
+          await updateContext(userId, {
+            stage: 'order_complete',
+            lastAction: 'payment_confirmed_webhook',
+            cart: [],
+            pendingOrder: null
+          });
+          console.log(`🔔 User ${userId} notified and context reset.`);
+        }
+      }
+
     } catch (error) {
       console.error(`❌ Error updating order #${orderId}:`, error);
     }
