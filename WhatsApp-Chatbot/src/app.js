@@ -14,10 +14,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
-/* ======================
-   STRIPE WEBHOOK ENDPOINTS
-   Endpoint for Stripe Payment Events
-====================== */
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event; // Defines 'event' variable
@@ -39,14 +35,14 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
     try {
       // 1. Update order status in database
       const orderResult = await db.query(
-        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1 RETURNING customer_id, platform",
+        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1 RETURNING customer_platform_id, platform",
         [orderId]
       );
       console.log(`✅ Order #${orderId} marked as confirmed/online`);
 
       // 2. Notify the user
       if (orderResult.rows.length > 0) {
-        const { customer_id: userId, platform } = orderResult.rows[0];
+        const { customer_platform_id: userId, platform } = orderResult.rows[0];
 
         if (userId && platform) {
           await sendMessage(
