@@ -807,9 +807,11 @@ const toolHandlers = {
         context.service_type = 'dine_in';
 
         // Create order in DB first to get ID
+        // Create order in DB first to get ID
         const finalOrder = await restaurantTools.finalizeOrderFromCart(userId, cart, {
           service_type: 'dine_in',
-          payment_method: null // Not selected yet
+          payment_method: null, // Not selected yet
+          platform: context.platform
         });
 
         // Store order details in context
