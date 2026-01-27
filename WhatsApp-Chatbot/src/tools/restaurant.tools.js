@@ -468,7 +468,7 @@ async function generatePaymentLink(orderId) {
 
   const lineItems = itemsRes.rows.map(item => ({
     price_data: {
-      currency: 'npr',
+      currency: 'aud',
       product_data: {
         name: item.name,
       },

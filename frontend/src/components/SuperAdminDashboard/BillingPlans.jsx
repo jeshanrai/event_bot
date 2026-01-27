@@ -46,11 +46,11 @@ const BillingPlans = () => {
     };
 
     const handleFeatureToggle = (planId, featureIndex) => {
-        setPlans(plans.map(p => 
-            p.id === planId 
+        setPlans(plans.map(p =>
+            p.id === planId
                 ? {
                     ...p,
-                    features: p.features.map((f, idx) => 
+                    features: p.features.map((f, idx) =>
                         idx === featureIndex ? { ...f, included: !f.included } : f
                     )
                 }
@@ -101,10 +101,10 @@ const BillingPlans = () => {
             // Save each modified plan
             for (const plan of plans) {
                 const originalPlan = originalPlans.find(p => p.id === plan.id);
-                
+
                 // Check if plan has been modified
                 const hasChanges = JSON.stringify(plan) !== JSON.stringify(originalPlan);
-                
+
                 if (hasChanges) {
                     const updateData = {
                         name: plan.name,
@@ -119,7 +119,7 @@ const BillingPlans = () => {
                         is_active: plan.is_active,
                         display_order: plan.display_order
                     };
-                    
+
                     await superAdminAPI.updatePlan(plan.id, updateData);
                 }
             }
@@ -209,7 +209,7 @@ const BillingPlans = () => {
                                 <div className="sa-plan-header">
                                     <h3 className="sa-plan-name">{plan.name}</h3>
                                     <div className="sa-plan-price">
-                                        <span>₨</span>
+                                        <span>AUD</span>
                                         <input
                                             type="number"
                                             value={plan.price}

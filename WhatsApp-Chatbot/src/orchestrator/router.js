@@ -91,7 +91,7 @@ const toolHandlers = {
       if (cart.length > 0) {
         const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-        bodyText = `🛒 Cart: ${itemCount} item(s) - Rs.${total}\n\nSelect items to add:`;
+        bodyText = `🛒 Cart: ${itemCount} item(s) - AUD ${total}\n\nSelect items to add:`;
       }
 
       // Build list rows (max 10 items per WhatsApp limit)
@@ -100,7 +100,7 @@ const toolHandlers = {
       const rows = foods.slice(0, 10).map(food => ({
         id: `add_${food.id}`,
         title: food.name.substring(0, 24), // WhatsApp limit: 24 chars
-        description: `Rs.${food.price} - ${(food.description || '').substring(0, 60)}`, // WhatsApp limit: 72 chars
+        description: `AUD ${food.price} - ${(food.description || '').substring(0, 60)}`, // WhatsApp limit: 72 chars
         imageUrl: food.image_url || null  // Pass DB image for Messenger generic template
       }));
 
@@ -204,7 +204,7 @@ const toolHandlers = {
         userId,
         context.platform,
         '✅ Added to Cart!',
-        `*${food.name}* x${quantity} - Rs.${food.price * quantity}\n\n🛒 Cart: ${itemCount} item(s) | Total: Rs.${total}\n\nWhat would you like to do?`,
+        `*${food.name}* x${quantity} - AUD ${food.price * quantity}\n\n🛒 Cart: ${itemCount} item(s) | Total: AUD ${total}\n\nWhat would you like to do?`,
         'Keep adding or checkout!',
         buttons
       );
@@ -319,7 +319,7 @@ const toolHandlers = {
           userId,
           context.platform,
           '✅ Added to Cart!',
-          `*${food.name}* x${quantity} - Rs.${food.price * quantity}\n\n🛒 Cart: ${itemCount} item(s) | Total: Rs.${total}\n\nWhat would you like to do?`,
+          `*${food.name}* x${quantity} - AUD ${food.price * quantity}\n\n🛒 Cart: ${itemCount} item(s) | Total: AUD ${total}\n\nWhat would you like to do?`,
           'Keep adding or checkout!',
           buttons
         );
@@ -340,7 +340,7 @@ const toolHandlers = {
       const rows = matchingItems.slice(0, 10).map(food => ({
         id: `add_${food.id}`,
         title: food.name.substring(0, 24),
-        description: `Rs.${food.price} - ${(food.description || '').substring(0, 50)}`
+        description: `AUD ${food.price} - ${(food.description || '').substring(0, 50)}`
       }));
 
       await sendListMessage(
@@ -435,7 +435,7 @@ const toolHandlers = {
 
       // Build added items summary
       const addedSummary = addedItems.map(item =>
-        `✓ ${item.name} x${item.quantity} - Rs.${item.subtotal}`
+        `✓ ${item.name} x${item.quantity} - AUD ${item.subtotal}`
       ).join('\n');
 
       let message = `*${addedItems.length} item(s) added!*\n\n${addedSummary}`;
@@ -445,7 +445,7 @@ const toolHandlers = {
         message += `\n\n⚠️ Not available:\n${notFoundItems.map(n => `• ${n}`).join('\n')}`;
       }
 
-      message += `\n\n━━━━━━━━━━━━━━━\n🛒 Cart: ${itemCount} item(s)\n💰 Total: Rs.${total}`;
+      message += `\n\n━━━━━━━━━━━━━━━\n🛒 Cart: ${itemCount} item(s)\n💰 Total: AUD ${total}`;
 
       const buttons = [
         {
@@ -499,7 +499,7 @@ const toolHandlers = {
     }
 
     const cartLines = cart.map(item =>
-      `• ${item.name} x${item.quantity} - Rs.${item.price * item.quantity}`
+      `• ${item.name} x${item.quantity} - AUD ${item.price * item.quantity}`
     ).join('\n');
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -524,7 +524,7 @@ const toolHandlers = {
       userId,
       context.platform,
       '🛒 Your Cart',
-      `${cartLines}\n━━━━━━━━━━━━━━━\nSubtotal: Rs.${total}\n\nWould you like to add more items or proceed to checkout?`,
+      `${cartLines}\n━━━━━━━━━━━━━━━\nSubtotal: AUD ${total}\n\nWould you like to add more items or proceed to checkout?`,
       'You can add more items anytime!',
       buttons
     );
@@ -609,11 +609,11 @@ const toolHandlers = {
     items = validatedItems;
 
     const orderLines = items.map(item =>
-      `• ${item.name} x${item.quantity} - Rs.${item.price * item.quantity}`
+      `• ${item.name} x${item.quantity} - AUD ${item.price * item.quantity}`
     ).join('\n');
 
     const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const orderDetails = `${orderLines}\n━━━━━━━━━━━━━━━\nTotal: Rs.${total}`;
+    const orderDetails = `${orderLines}\n━━━━━━━━━━━━━━━\nTotal: AUD ${total}`;
 
     await sendOrderConfirmationMessage(userId, context.platform, orderDetails);
 
