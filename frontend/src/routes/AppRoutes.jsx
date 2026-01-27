@@ -5,6 +5,9 @@ import RestaurantSignup from '../pages/RestaurantSignup';
 import Dashboard from '../pages/Dashboard';
 import StaffDashboard from '../pages/StaffDashboard';
 import AdminDashboard from '../pages/AdminDashboard';
+import ResetPassword from '../pages/ResetPassword';
+import VerifyOTP from '../pages/VerfiyOTP';
+import ForgetPassword from '../pages/ForgetPassword';
 
 
 const AppRoutes = () => {
@@ -16,6 +19,11 @@ const AppRoutes = () => {
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/staff-dashboard" element={<StaffDashboard />} />
+            <Route path="/forget-password" element={<ForgetPassword />} />
+            <Route path="/verifyOTP" element={<VerifyOTP />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
+            
         </Routes>
     );
 };

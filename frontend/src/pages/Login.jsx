@@ -76,12 +76,17 @@ const Login = () => {
                     </button>
                 </div>
 
-                <div className="form-options" style={{ flexDirection: 'row-reverse' }}>
-                    <label className="checkbox-label">
-                        <input type="checkbox" className="checkbox-input" />
-                        <span className="checkbox-text">Remember me</span>
-                    </label>
-                </div>
+                <div className="form-options" style={{ justifyContent: "space-between" }}>
+
+                     <label className="checkbox-label">
+                          <input type="checkbox" className="checkbox-input" />
+                           <span className="checkbox-text">Remember me</span>
+                      </label>
+                    <Link to="/forget-password" className="form-link">
+                            Forgot password?
+                    </Link>
+               </div>
+
 
                 {error && (
                     <div className="error-message">

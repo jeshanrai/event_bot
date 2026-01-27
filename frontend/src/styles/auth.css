@@ -408,10 +408,11 @@
 }
 
 .input-with-icon .input {
-    padding-left: 48px;
+    padding-left: 14px;
 }
 
 .password-toggle {
+    margin-top: 2%;
     position: absolute;
     right: 16px;
     top: 50%;
