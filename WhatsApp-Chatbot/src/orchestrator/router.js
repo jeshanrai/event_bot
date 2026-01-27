@@ -5,9 +5,7 @@ import {
   sendMessage,
   sendListMessage,
   sendButtonMessage,
-  sendCarouselMessage,
-  sendOrderConfirmationMessage,
-  sendLocationRequest
+  sendOrderConfirmationMessage
 } from '../services/response.js';
 import * as restaurantTools from '../tools/restaurant.tools.js';
 
@@ -138,10 +136,7 @@ const toolHandlers = {
     }
   },
 
-  // Backward compatibility - show_momo_varieties calls show_category_items
-  show_momo_varieties: async (args, userId, context) => {
-    return await toolHandlers.show_category_items({ category: 'momos' }, userId, context);
-  },
+
 
   // Add item to cart - uses database to get item details (IMPROVED: Quick add with quantity options)
   add_to_cart: async (args, userId, context) => {
@@ -989,7 +984,7 @@ const toolHandlers = {
       const rows = foods.map(food => ({
         id: `add_${food.id}`,
         title: food.name.substring(0, 24),
-        description: `Rs.${food.price} - ${food.category}`
+        description: `AUD.${food.price} - ${food.category}`
       }));
 
       // Different title for random
@@ -1157,28 +1152,6 @@ async function routeIntent({ text, context, userId, interactiveReply, location }
 
   // Handle Text Inputs based on Stage
   if (!interactiveReply && text) {
-    if (context.stage === 'collecting_party_size') {
-      const size = parseInt(text);
-      if (!isNaN(size) && size > 0) {
-        return await toolHandlers.collect_arrival_time({ partySize: size }, userId, context);
-      } else {
-        await sendMessage(userId, context.platform, "Please enter a valid number for party size.");
-        return { reply: null, updatedContext: context };
-      }
-    }
-
-    if (context.stage === 'collecting_arrival_time') {
-      return await toolHandlers.confirm_reservation_deposit({ arrivalTime: text }, userId, context);
-    }
-
-    if (context.stage === 'providing_location') {
-      // Pass both text address and location object (if shared via WhatsApp location)
-      return await toolHandlers.provide_location({
-        address: text,
-        location: location || null
-      }, userId, context);
-    }
-
     // Handle payment method selection via text
     if (context.stage === 'selecting_payment') {
       const paymentText = text.toLowerCase();
