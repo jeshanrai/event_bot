@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Momo House Menu</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Messenger Extensions SDK -->
+    <script>
+      (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "//connect.facebook.net/en_US/messenger.Extensions.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'Messenger'));
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Momo House - Beverages ☕</h1>
+        <p>Select items to add to your order</p>
+    </header>
+
+    <div class="container">
+        <!-- Static Menu Items for Phase 1 -->
+        <form id="order-form">
+            <div class="menu-list">
+                <!-- Beverages -->
+                <div class="menu-item">
+                    <img src="https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=200" alt="Flat White">
+                    <div class="item-details">
+                        <h3>Flat White</h3>
+                        <p class="description">Classic Australian coffee with velvety microfoam.</p>
+                        <p class="price">$4.50</p>
+                    </div>
+                    <div class="item-controls">
+                        <input type="checkbox" name="item" value="Flat White" data-price="4.50" id="item-1">
+                        <select name="qty" disabled>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="menu-item">
+                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200" alt="Long Black">
+                    <div class="item-details">
+                        <h3>Long Black</h3>
+                        <p class="description">Strong black coffee with double shot.</p>
+                        <p class="price">$4.00</p>
+                    </div>
+                    <div class="item-controls">
+                        <input type="checkbox" name="item" value="Long Black" data-price="4.00" id="item-2">
+                        <select name="qty" disabled>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="menu-item">
+                    <img src="https://images.unsplash.com/photo-1572442388796-11668a67e569?w=200" alt="Cappuccino">
+                    <div class="item-details">
+                        <h3>Cappuccino</h3>
+                        <p class="price">$4.80</p>
+                    </div>
+                    <div class="item-controls">
+                        <input type="checkbox" name="item" value="Cappuccino" data-price="4.80" id="item-3">
+                        <select name="qty" disabled>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                </div>
+
+                 <div class="menu-item">
+                    <img src="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=200" alt="Iced Coffee">
+                    <div class="item-details">
+                        <h3>Iced Coffee (Aussie)</h3>
+                        <p class="price">$6.50</p>
+                    </div>
+                    <div class="item-controls">
+                        <input type="checkbox" name="item" value="Iced Coffee" data-price="6.50" id="item-4">
+                        <select name="qty" disabled>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sticky-footer">
+                <div class="total">Total: <span id="total-price">$0.00</span></div>
+                <button type="submit" id="submit-btn" disabled>Add to Order</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
