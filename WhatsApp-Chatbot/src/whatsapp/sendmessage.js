@@ -331,6 +331,80 @@ export async function sendWhatsAppMessage(to, text) {
  * Send a location request message (WhatsApp native location sharing)
  * When user taps the button, they can share their GPS location
  */
+/**
+ * Send a CTA URL button message (opens webpage/webview)
+ * Used for sending menu webview links
+ */
+export async function sendWhatsAppCtaUrlButton(to, headerText, bodyText, footerText, buttonText, url) {
+  console.log('\n✅ [FINAL RESPONSE MESSAGE]');
+  console.log(`🎯 User ID: ${to}`);
+  console.log(`📝 Type: CTA URL Button`);
+  console.log(`📤 URL: ${url}`);
+  console.log('━'.repeat(50));
+
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!phoneNumberId || !accessToken) {
+    console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
+    return;
+  }
+
+  const urlObj = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: to,
+    type: 'interactive',
+    interactive: {
+      type: 'cta_url',
+      header: {
+        type: 'text',
+        text: headerText
+      },
+      body: {
+        text: bodyText
+      },
+      footer: {
+        text: footerText
+      },
+      action: {
+        name: 'cta_url',
+        parameters: {
+          display_text: buttonText,
+          url: url
+        }
+      }
+    }
+  };
+
+  console.log('🔗 [WhatsApp CTA URL Button]', JSON.stringify(payload, null, 2));
+
+  try {
+    const response = await fetch(urlObj, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('WhatsApp API error:', error);
+      return;
+    }
+
+    const result = await response.json();
+    console.log('CTA URL button sent successfully:', result.messages?.[0]?.id);
+    return result;
+  } catch (error) {
+    console.error('Failed to send WhatsApp CTA URL button:', error);
+  }
+}
+
 export async function sendWhatsAppLocationRequest(to, bodyText) {
   console.log('\n✅ [FINAL RESPONSE MESSAGE]');
   console.log(`🎯 User ID: ${to}`);

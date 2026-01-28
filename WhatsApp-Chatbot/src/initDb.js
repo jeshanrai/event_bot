@@ -161,12 +161,17 @@ INSERT INTO foods (restaurant_id, name, description, price, category, image_url,
 (1, 'Egg Fried Rice', 'Classic egg fried rice with vegetables', 19.00, 'rice', 'https://images.unsplash.com/photo-1596560548464-f010549b84d7?w=400&q=80', true),
 (1, 'Chicken Biryani', 'Aromatic basmati rice with spiced chicken', 30.00, 'rice', 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&q=80', true),
 
--- Beverages
-(1, 'Masala Tea', 'Traditional spiced tea', 4.00, 'beverages', 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400&q=80', true),
-(1, 'Coffee', 'Hot brewed coffee', 6.00, 'beverages', 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&q=80', true),
-(1, 'Fresh Lime Soda', 'Refreshing lime soda (sweet/salty)', 8.00, 'beverages', 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&q=80', true),
-(1, 'Mango Lassi', 'Creamy mango yogurt drink', 10.00, 'beverages', 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?w=400&q=80', true),
-(1, 'Cold Coffee', 'Iced coffee with cream', 12.00, 'beverages', 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&q=80', true)
+-- Beverages (Australian Selection)
+(1, 'Flat White', 'Classic Australian coffee with velvety microfoam and rich espresso.', 4.50, 'Beverages', 'images/flat_white.jpg', true),
+(1, 'Long Black', 'Hot water topped with a double shot of espresso for a strong flavor.', 4.00, 'Beverages', 'images/long_black.jpg', true),
+(1, 'Cappuccino', 'Espresso with steamed milk and a thick layer of foam, dusted with cocoa.', 4.80, 'Beverages', 'images/cappuccino.jpg', true),
+(1, 'Iced Coffee (Aussie Style)', 'Chilled coffee served with milk, ice cream, and whipped cream.', 6.50, 'Beverages', 'images/iced_coffee.jpg', true),
+(1, 'Milo Drink', 'Hot chocolate malt drink loved across Australia.', 3.50, 'Beverages', 'images/milo.jpg', true),
+(1, 'Lemon Lime Bitters', 'Refreshing mix of lemon squash, lime cordial, and bitters.', 4.20, 'Beverages', 'images/lemon_lime_bitters.jpg', true),
+(1, 'Bundaberg Ginger Beer', 'Famous Australian brewed ginger beer, non-alcoholic.', 3.80, 'Beverages', 'images/ginger_beer.jpg', true),
+(1, 'Chai Latte', 'Spiced tea latte with steamed milk and cinnamon aroma.', 4.60, 'Beverages', 'images/chai_latte.jpg', true),
+(1, 'Iced Chocolate', 'Cold chocolate drink topped with whipped cream and chocolate syrup.', 5.80, 'Beverages', 'images/iced_chocolate.jpg', true),
+(1, 'Affogato', 'Vanilla ice cream topped with a shot of hot espresso.', 5.20, 'Beverages', 'images/affogato.jpg', true)
 
 ON CONFLICT DO NOTHING;
 `;

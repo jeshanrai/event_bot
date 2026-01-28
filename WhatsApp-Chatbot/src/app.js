@@ -14,6 +14,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
+// Serve static files for Messenger Webview
+app.use(express.static('public'));
+
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event; // Defines 'event' variable

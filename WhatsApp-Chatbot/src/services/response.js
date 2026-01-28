@@ -3,7 +3,8 @@ import {
     sendWhatsAppListMessage,
     sendWhatsAppButtonMessage,
     sendWhatsAppCarouselMessage,
-    sendWhatsAppLocationRequest
+    sendWhatsAppLocationRequest,
+    sendWhatsAppCtaUrlButton
 } from '../whatsapp/sendmessage.js';
 
 import {
@@ -176,3 +177,27 @@ export async function sendLocationRequest(userId, platform, bodyText) {
     // WhatsApp - use native location request
     return await sendWhatsAppLocationRequest(userId, bodyText);
 }
+
+/**
+ * Send a CTA URL button message (opens webpage/webview)
+ * WhatsApp: Uses CTA URL interactive message
+ * Messenger: Uses Button Template with web_url type
+ */
+export async function sendCtaUrlMessage(userId, platform, headerText, bodyText, footerText, buttonText, url) {
+    if (platform === 'messenger') {
+        // Messenger uses Button Template with web_url
+        const buttons = [
+            {
+                type: 'web_url',
+                title: buttonText,
+                url: url,
+                webview_height_ratio: 'tall',
+                messenger_extensions: true
+            }
+        ];
+        return await sendMessengerButtonTemplate(userId, `${headerText}\n\n${bodyText}`, buttons);
+    }
+    // WhatsApp - use CTA URL button
+    return await sendWhatsAppCtaUrlButton(userId, headerText, bodyText, footerText, buttonText, url);
+}
+

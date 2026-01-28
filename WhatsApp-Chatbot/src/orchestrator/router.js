@@ -5,49 +5,28 @@ import {
   sendMessage,
   sendListMessage,
   sendButtonMessage,
-  sendOrderConfirmationMessage
+  sendOrderConfirmationMessage,
+  sendCtaUrlMessage
 } from '../services/response.js';
 import * as restaurantTools from '../tools/restaurant.tools.js';
 
 // Tool execution handlers
 const toolHandlers = {
-  // Step 1: Show food category menu (List Message) - FROM DATABASE
+  // Step 1: Show food menu webview (CTA URL Button) - Opens menu page in browser
   show_food_menu: async (args, userId, context) => {
     try {
-      // Fetch categories from database
-      const categories = await restaurantTools.getMenu();
+      // Get the base URL from environment or use default
+      const baseUrl = process.env.APP_BASE_URL || 'https://your-domain.com';
+      const menuUrl = `${baseUrl}/menu.html?userId=${userId}`;
 
-      const categoryEmojis = {
-        'momos': '🥟',
-        'noodles': '🍜',
-        'rice': '🍚',
-        'beverages': '☕'
-      };
-
-      // Build category rows (WhatsApp list rows only support id, title, description)
-      const rows = categories.map(cat => ({
-        id: `cat_${cat.category}`,
-        title: `${cat.category.charAt(0).toUpperCase() + cat.category.slice(1)} ${categoryEmojis[cat.category] || '🍽️'}`,
-        description: `Browse our ${cat.category} options`
-      }));
-
-      const sections = [
-        {
-          title: 'Food Categories',
-          rows: rows.length > 0 ? rows : [
-            { id: 'cat_momos', title: 'Momos 🥟', description: 'Steamed, fried, tandoori varieties' }
-          ]
-        }
-      ];
-
-      await sendListMessage(
+      await sendCtaUrlMessage(
         userId,
         context.platform,
         '🍽️ Restaurant Menu',
-        'Welcome! What would you like to order today? Browse our delicious categories below.',
-        'Tap to view options',
-        'View Categories',
-        sections
+        'Welcome! Tap the button below to browse our delicious menu and add items to your cart.',
+        'Momo House - Best food in town!',
+        'View Menu 📋',
+        menuUrl
       );
 
       return {
@@ -59,7 +38,7 @@ const toolHandlers = {
         }
       };
     } catch (error) {
-      console.error('Error fetching menu:', error);
+      console.error('Error sending menu webview:', error);
       await sendMessage(userId, context.platform, "Sorry, I couldn't load the menu. Please try again.");
       return { reply: null, updatedContext: context };
     }
