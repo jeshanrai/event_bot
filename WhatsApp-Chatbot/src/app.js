@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import whatsappWebhook from './webhooks/whatsapp.js';
 import messengerWebhook from './webhooks/messenger.js';
 import { handleIncomingMessage } from './orchestrator/index.js';
@@ -8,6 +10,10 @@ import Stripe from 'stripe';
 import { sendMessage } from './services/response.js';
 import { updateContext } from './orchestrator/context.js';
 
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -15,7 +21,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const app = express();
 
 // Serve static files for Messenger Webview
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
