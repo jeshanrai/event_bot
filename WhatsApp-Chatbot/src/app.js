@@ -59,6 +59,57 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
+// API: Get User Cart from Session
+app.get('/api/cart/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await db.query('SELECT cart FROM sessions WHERE user_id = $1', [userId]);
+
+    if (result.rows.length > 0) {
+      res.json({ success: true, cart: result.rows[0].cart || [] });
+    } else {
+      res.json({ success: true, cart: [] });
+    }
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch cart' });
+  }
+});
+
+// API: Update User Cart in Session
+app.post('/api/cart/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { items } = req.body; // Expecting array of { foodId, quantity, name, price }
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ success: false, error: 'Invalid cart format' });
+    }
+
+    // Check if session exists
+    const sessionCheck = await db.query('SELECT user_id FROM sessions WHERE user_id = $1', [userId]);
+
+    if (sessionCheck.rows.length === 0) {
+      // Create session if not exists
+      await db.query(
+        'INSERT INTO sessions (user_id, context, cart) VALUES ($1, $2, $3)',
+        [userId, '{}', JSON.stringify(items)]
+      );
+    } else {
+      // Update existing session
+      await db.query(
+        'UPDATE sessions SET cart = $1, updated_at = NOW() WHERE user_id = $2',
+        [JSON.stringify(items), userId]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating cart:', error);
+    res.status(500).json({ success: false, error: 'Failed to update cart' });
+  }
+});
+
 
 
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -155,6 +206,10 @@ app.post('/api/messenger/order', async (req, res) => {
     const addedItems = [];
 
     // 3. Process Items (similar to router.add_multiple_items)
+    if (req.body.mode === 'replace') {
+      cart = []; // Reset cart if replacing
+    }
+
     for (const item of items) {
       // Search DB for price/name validation
       const matchingStart = await restaurantTools.getFoodByName(item.name);

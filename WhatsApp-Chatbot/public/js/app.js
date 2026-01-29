@@ -14,10 +14,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initializeApp() {
     await loadMenuData();
+    await loadUserCart(); // Load user's session cart
     setupEventListeners();
     renderCategories(); // This will now use data from the backend if possible, or derive from items
     renderMenu();
+    updateCartPreview(); // Update preview with loaded cart
+    updateTotal();       // Update total
     hideLoading();
+}
+
+async function loadUserCart() {
+    // Get userId from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId');
+
+    if (!userId) return;
+
+    try {
+        const res = await fetch(`/api/cart/${userId}`);
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.cart)) {
+            // Convert backend array [{foodId, quantity}] to frontend object {itemId: quantity}
+            state.cart = {};
+            data.cart.forEach(item => {
+                state.cart[item.foodId] = item.quantity;
+            });
+            console.log('Cart loaded from session:', state.cart);
+        }
+    } catch (error) {
+        console.error('Error loading user cart:', error);
+    }
 }
 
 async function loadMenuData() {
@@ -273,6 +300,9 @@ function updateQuantity(itemId, delta) {
             showToast(`Removed ${item.name}`);
         }
     }
+
+    // Sync with backend
+    syncCartWithBackend();
 }
 
 function updateCartPreview() {
@@ -345,6 +375,34 @@ function updateTotal() {
     const modalCheckoutBtn = document.getElementById('modal-checkout-btn');
     if (modalCheckoutBtn) {
         modalCheckoutBtn.disabled = total === 0;
+    }
+}
+
+async function syncCartWithBackend() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId');
+    if (!userId) return;
+
+    // Convert state.cart to array format expected by backend
+    const cartItems = Object.entries(state.cart).map(([itemId, quantity]) => {
+        const item = state.menuData.find(i => i.id === parseInt(itemId));
+        if (!item) return null;
+        return {
+            foodId: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: quantity
+        };
+    }).filter(item => item !== null);
+
+    try {
+        await fetch(`/api/cart/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: cartItems })
+        });
+    } catch (e) {
+        console.error("Failed to sync cart", e);
     }
 }
 
@@ -502,7 +560,8 @@ async function handleCheckout() {
             },
             body: JSON.stringify({
                 userId: userId,
-                items: orderData
+                items: orderData,
+                mode: 'replace' // Tell backend to use this exact cart
             })
         });
 
