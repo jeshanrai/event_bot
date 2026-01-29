@@ -52,8 +52,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Handle Submit
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // Get userId from URL query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId');
+
+        if (!userId) {
+            alert('Error: User ID missing from URL. Cannot place order.');
+            return;
+        }
 
         const selectedItems = [];
         checkboxes.forEach(cb => {
@@ -68,37 +77,60 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        console.log('Order Items:', selectedItems);
+        if (selectedItems.length === 0) {
+            alert('Please select at least one item.');
+            return;
+        }
 
-        // Send data back to Bot via Messenger Extensions
-        if (typeof MessengerExtensions !== 'undefined') {
-            MessengerExtensions.getContext('YOUR_APP_ID',
-                function success(thread_context) {
-                    // For simplified Phase 1, we can't easily push data back unless we have the loop set up.
-                    // Standard approach: Close webview and let backend know via a separate call or just tell user to type "Done".
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
 
-                    // Since we don't have the full post-back flow ready in backend yet, 
-                    // we will rely on a neat trick: Just close it and we simulate the message 
-                    // OR we can trigger a postback if supported.
-
-                    // For now, let's try closing. 
-                    // NOTE: Passing data back usually requires `MessengerExtensions.beginShareFlow` or a backend endpoint.
-
-                    // Let's assume we call our backend endpoint first to save the state, then close.
-                    // fetch('/api/webview-submit', { ... })
-
-                    alert('Items selected! (Simulated)');
-                    MessengerExtensions.requestCloseBrowser(function success() { }, function error(err) { });
+        try {
+            // Send data to backend
+            const response = await fetch('/api/messenger/order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
                 },
-                function error(err) {
-                    console.error(err);
-                    // Fallback for testing in browser
-                    alert('Order submitted: ' + JSON.stringify(selectedItems));
+                body: JSON.stringify({
+                    userId: userId,
+                    items: selectedItems
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Determine environment and close window
+                if (typeof MessengerExtensions !== 'undefined') {
+                    MessengerExtensions.requestCloseBrowser(
+                        function success() {
+                            // Webview closed
+                        },
+                        function error(err) {
+                            console.error(err);
+                            // If close fails, show success message
+                            document.body.innerHTML = `
+                                <div style="text-align:center; padding: 50px; font-family: sans-serif;">
+                                    <h1>✅ Order Sent!</h1>
+                                    <p>You can close this window and return to the chat.</p>
+                                </div>
+                            `;
+                        }
+                    );
+                } else {
+                    alert('Order sent successfully! You can close this window.');
                 }
-            );
-        } else {
-            // Browser fallback
-            alert('Order submitted (Browser Mode): ' + JSON.stringify(selectedItems));
+            } else {
+                alert('Error: ' + (result.message || 'Failed to send order'));
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Add to Order';
+            }
+        } catch (error) {
+            console.error('Error submitting order:', error);
+            alert('Network error. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add to Order';
         }
     });
 });

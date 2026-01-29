@@ -1,32 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Momo House Menu</title>
     <link rel="stylesheet" href="css/style.css">
+
     <!-- Messenger Extensions SDK -->
     <script>
-      (function(d, s, id){
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) {return;}
-        js = d.createElement(s); js.id = id;
-        js.src = "//connect.facebook.net/en_US/messenger.Extensions.js";
-        fjs.parentNode.insertBefore(js, fjs);
-      }(document, 'script', 'Messenger'));
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) { return; }
+            js = d.createElement(s); js.id = id;
+            js.src = "//connect.facebook.net/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'Messenger'));
     </script>
 </head>
+
 <body>
-    <header>
-        <h1>Momo House - Beverages ☕</h1>
-        <p>Select items to add to your order</p>
+    <header class="header">
+        <h1>Momo House ☕ Beverages</h1>
+        <p>Choose your favorites to order</p>
     </header>
 
     <div class="container">
-        <!-- Static Menu Items for Phase 1 -->
         <form id="order-form">
             <div class="menu-list">
-                <!-- Beverages -->
+
+                <!-- Menu Item Template -->
                 <div class="menu-item">
                     <img src="https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=200" alt="Flat White">
                     <div class="item-details">
@@ -65,6 +68,7 @@
                     <img src="https://images.unsplash.com/photo-1572442388796-11668a67e569?w=200" alt="Cappuccino">
                     <div class="item-details">
                         <h3>Cappuccino</h3>
+                        <p class="description">Smooth and creamy cappuccino.</p>
                         <p class="price">$4.80</p>
                     </div>
                     <div class="item-controls">
@@ -77,10 +81,11 @@
                     </div>
                 </div>
 
-                 <div class="menu-item">
+                <div class="menu-item">
                     <img src="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=200" alt="Iced Coffee">
                     <div class="item-details">
                         <h3>Iced Coffee (Aussie)</h3>
+                        <p class="description">Chilled coffee with a refreshing kick.</p>
                         <p class="price">$6.50</p>
                     </div>
                     <div class="item-controls">
@@ -92,6 +97,7 @@
                         </select>
                     </div>
                 </div>
+
             </div>
 
             <div class="sticky-footer">
@@ -103,4 +109,5 @@
 
     <script src="js/app.js"></script>
 </body>
+
 </html>

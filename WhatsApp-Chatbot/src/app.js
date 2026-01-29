@@ -7,8 +7,9 @@ import { handleIncomingMessage } from './orchestrator/index.js';
 import db from './db.js';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
-import { sendMessage } from './services/response.js';
-import { updateContext } from './orchestrator/context.js';
+import { sendMessage, sendButtonMessage } from './services/response.js';
+import { updateContext, getContext } from './orchestrator/context.js';
+import * as restaurantTools from './tools/restaurant.tools.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +20,7 @@ dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
+
 // Allow Messenger Webview embedding
 app.use((req, res, next) => {
   res.removeHeader("X-Frame-Options");
@@ -88,6 +90,83 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
   }
 
   res.send();
+});
+
+// MESSENGER WEBVIEW ORDER ENDPOINT
+app.post('/api/messenger/order', async (req, res) => {
+  const { userId, items } = req.body;
+
+  console.log(`📥 Received Webview Order for ${userId}:`, items);
+
+  if (!userId || !items || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Invalid data' });
+  }
+
+  try {
+    // 1. Get or Init Context
+    let context = await getContext(userId);
+    if (!context) {
+      context = { userId, platform: 'messenger', cart: [] };
+    }
+
+    let cart = context.cart || [];
+    const addedItems = [];
+
+    // 2. Process Items (similar to router.add_multiple_items)
+    for (const item of items) {
+      // Search DB for price/name validation
+      const matchingStart = await restaurantTools.getFoodByName(item.name);
+      if (matchingStart.length > 0) {
+        const food = matchingStart[0];
+
+        // Update Cart
+        const existingItem = cart.find(c => c.foodId === food.id);
+        if (existingItem) {
+          existingItem.quantity += item.quantity;
+        } else {
+          cart.push({
+            foodId: food.id,
+            name: food.name,
+            price: parseFloat(food.price),
+            quantity: item.quantity
+          });
+        }
+        addedItems.push({ name: food.name, quantity: item.quantity });
+      }
+    }
+
+    // 3. Update Context
+    await updateContext(userId, {
+      ...context,
+      cart,
+      stage: 'quick_cart_action',
+      lastAction: 'webview_order'
+    });
+
+    // 4. Send Confirmation to Messenger
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+    const addedText = addedItems.map(i => `✓ ${i.name} x${i.quantity}`).join('\n');
+
+    await sendButtonMessage(
+      userId,
+      'messenger',
+      '✅ Items Added from Menu!',
+      `${addedText}\n\n🛒 Cart Total: ${itemCount} items | AUD ${total}`,
+      'What next?',
+      [
+        { type: 'reply', reply: { id: 'view_all_categories', title: 'Add More' } },
+        { type: 'reply', reply: { id: 'proceed_checkout', title: 'Checkout 🛒' } }
+      ]
+    );
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error processing webview order:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
 app.use(express.json());
