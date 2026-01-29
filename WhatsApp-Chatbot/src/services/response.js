@@ -192,9 +192,11 @@ export async function sendCtaUrlMessage(userId, platform, headerText, bodyText, 
                 title: buttonText,
                 url: url,
                 webview_height_ratio: 'tall',
-                messenger_extensions: true
+                messenger_extensions: true,
+                fallback_url: url   // ⭐ REQUIRED
             }
         ];
+
         return await sendMessengerButtonTemplate(userId, `${headerText}\n\n${bodyText}`, buttons);
     }
     // WhatsApp - use CTA URL button

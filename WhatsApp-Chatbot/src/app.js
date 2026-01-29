@@ -19,9 +19,19 @@ dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
+// Allow Messenger Webview embedding
+app.use((req, res, next) => {
+  res.removeHeader("X-Frame-Options");
+  res.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors https://www.facebook.com https://messenger.com"
+  );
+  next();
+});
 
-// Serve static files for Messenger Webview
+// Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
 
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
