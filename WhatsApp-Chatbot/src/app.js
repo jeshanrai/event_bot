@@ -190,16 +190,21 @@ app.post('/api/messenger/order', async (req, res) => {
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const addedItemCount = addedItems.reduce((sum, item) => sum + item.quantity, 0);
 
-    const addedText = addedItems.map(i => `✓ ${i.name} x${i.quantity}`).join('\n');
+    const addedText = addedItems.map(i => {
+      // Find item to get price
+      const originalItem = cart.find(c => c.name === i.name);
+      const price = originalItem ? originalItem.price : 0;
+      return `• ${i.name} x${i.quantity} - AUD ${price * i.quantity}`;
+    }).join('\n');
 
     await sendButtonMessage(
       userId,
       platform, // Use detected platform
       '✅ Items Added from Menu!',
-      `${addedText}\n\n🛒 Cart Total: ${itemCount} items | AUD ${total.toFixed(2)}`,
-      'What next?',
+      `${addedText}\n\n🛒 Cart Total: ${itemCount} items | AUD ${total}`,
+      'Select to continue:',
       [
-        { type: 'reply', reply: { id: 'view_all_categories', title: 'Add More' } },
+        { type: 'reply', reply: { id: 'view_all_categories', title: 'Add More ➕' } },
         { type: 'reply', reply: { id: 'proceed_checkout', title: 'Checkout 🛒' } }
       ]
     );

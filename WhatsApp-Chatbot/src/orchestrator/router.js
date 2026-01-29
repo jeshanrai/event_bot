@@ -799,6 +799,7 @@ const toolHandlers = {
     }
 
     // Use validated items
+    // Use validated items
     items = validatedItems;
 
     const orderLines = items.map(item =>
@@ -806,18 +807,68 @@ const toolHandlers = {
     ).join('\n');
 
     const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const orderDetails = `${orderLines}\n━━━━━━━━━━━━━━━\nTotal: AUD ${total}`;
 
-    await sendOrderConfirmationMessage(userId, context.platform, orderDetails);
+    // Create order in DB immediately to allow direct payment
+    console.log('🛒 Creating pending order for direct checkout...');
+
+    // Default to dine_in for this flow as requested
+    const serviceType = context.service_type || 'dine_in';
+
+    let finalOrder;
+    try {
+      finalOrder = await restaurantTools.finalizeOrderFromCart(userId, items, {
+        service_type: serviceType,
+        payment_method: null,
+        platform: context.platform
+      });
+    } catch (dbError) {
+      console.error('Error creating order in DB:', dbError);
+      // Fallback or specific error handling
+    }
+
+    const orderId = finalOrder ? finalOrder.id : `TEMP_${Date.now()}`;
+
+    const bodyText = `📋 Order Summary:\n${orderLines}\n━━━━━━━━━━━━━━━\n💰 Total: AUD ${total}\n\nSelect payment method to confirm:`;
+
+    // Direct Payment Buttons
+    const buttons = [
+      {
+        type: 'reply',
+        reply: {
+          id: 'pay_cash_counter',
+          title: 'Confirm & Cash 💵'
+        }
+      },
+      {
+        type: 'reply',
+        reply: {
+          id: 'pay_online',
+          title: 'Pay with Stripe 💳'
+        }
+      }
+    ];
+
+    await sendButtonMessage(
+      userId,
+      context.platform,
+      '🛒 Confirm & Pay',
+      bodyText,
+      `Order #${orderId}`,
+      buttons
+    );
 
     return {
       reply: null,
       updatedContext: {
         ...context,
-        cart: items, // Update cart with validated items
-        stage: 'confirming_order',
-        lastAction: 'confirm_order',
-        pendingOrder: { items, total }
+        cart: items,
+        stage: 'selecting_payment', // Skip 'confirming_order'
+        lastAction: 'confirm_order_direct',
+        pendingOrder: {
+          orderId: orderId, // Ensure ID is available for payment handlers
+          items,
+          total
+        }
       }
     };
   },

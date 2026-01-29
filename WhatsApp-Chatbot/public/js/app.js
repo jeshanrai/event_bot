@@ -511,27 +511,40 @@ async function handleCheckout() {
         if (result.success) {
             showToast('Order placed successfully! 🎉', 'success');
 
-            // Send to Messenger (if using Messenger Extensions)
-            if (typeof MessengerExtensions !== 'undefined') {
-                MessengerExtensions.requestCloseBrowser(
-                    function success() {
-                        // Webview closed
-                    },
-                    function error(err) {
-                        console.error('Error closing webview:', err);
-                    }
-                );
-            } else {
-                // If not in Messenger webview, just reset or show nice message
+            // Wait a moment for the toast to be seen
+            setTimeout(() => {
+                // 1. Try Messenger Extensions
+                if (typeof MessengerExtensions !== 'undefined') {
+                    MessengerExtensions.requestCloseBrowser(
+                        function success() {
+                            console.log("Webview closed via MessengerExtensions");
+                        },
+                        function error(err) {
+                            console.error('Error closing webview via MessengerExtensions:', err);
+                            window.close(); // Fallback
+                        }
+                    );
+                }
+
+                // 2. Try standard window.close() (works for some webviews/popups)
+                try {
+                    window.close();
+                } catch (e) {
+                    console.error('window.close() failed', e);
+                }
+
+                // 3. Fallback UI if it hasn't closed yet
                 setTimeout(() => {
                     document.body.innerHTML = `
                         <div style="text-align:center; padding: 50px; font-family: sans-serif;">
                             <h1>✅ Order Sent!</h1>
-                            <p>You can close this window and return to the chat.</p>
+                            <p>You can close this window manually and return to the chat.</p>
+                            <button onclick="window.close()" style="margin-top:20px; padding:10px 20px; background:#e74c3c; color:white; border:none; border-radius:5px; cursor:pointer;">Close Window</button>
                         </div>
                     `;
-                }, 1000);
-            }
+                }, 500);
+
+            }, 2000);
 
             // Reset cart
             state.cart = {};
