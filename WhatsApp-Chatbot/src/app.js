@@ -32,7 +32,33 @@ app.use((req, res, next) => {
 });
 
 // Serve static files
+
 app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.json());
+
+// API: Get menu items or categories
+app.get('/api/menu', async (req, res) => {
+  try {
+    const { category, all } = req.query;
+
+    let items;
+    if (all === 'true') {
+      // Fetch ALL items for client-side filtering
+      items = await restaurantTools.getFoodByName('');
+    } else if (category) {
+      items = await restaurantTools.getMenu(category);
+    } else {
+      // Return categories
+      items = await restaurantTools.getMenu(null);
+    }
+
+    res.json({ success: true, items });
+  } catch (error) {
+    console.error('Error fetching menu:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch menu' });
+  }
+});
+
 
 
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -169,7 +195,7 @@ app.post('/api/messenger/order', async (req, res) => {
   }
 });
 
-app.use(express.json());
+
 
 // Handle JSON parse errors
 app.use((err, req, res, next) => {

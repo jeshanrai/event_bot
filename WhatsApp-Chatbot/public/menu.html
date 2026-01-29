@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Momo House Menu</title>
-    <link rel="stylesheet" href="css/style.css">
 
     <!-- Messenger Extensions SDK -->
     <script>
@@ -17,95 +16,111 @@
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'Messenger'));
     </script>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
     <header class="header">
-        <h1>Momo House ☕ Beverages</h1>
-        <p>Choose your favorites to order</p>
+        <div class="header-content">
+            <h1>Event </h1>
+            <p class="subtitle">Delicious beverages & more</p>
+        </div>
     </header>
 
     <div class="container">
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="🔍 Search menu items..." aria-label="Search menu">
+            <button type="button" id="clear-search" class="clear-btn" aria-label="Clear search">✕</button>
+        </div>
+
         <form id="order-form">
-            <div class="menu-list">
-
-                <!-- Menu Item Template -->
-                <div class="menu-item">
-                    <img src="https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=200" alt="Flat White">
-                    <div class="item-details">
-                        <h3>Flat White</h3>
-                        <p class="description">Classic Australian coffee with velvety microfoam.</p>
-                        <p class="price">$4.50</p>
-                    </div>
-                    <div class="item-controls">
-                        <input type="checkbox" name="item" value="Flat White" data-price="4.50" id="item-1">
-                        <select name="qty" disabled>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="menu-item">
-                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200" alt="Long Black">
-                    <div class="item-details">
-                        <h3>Long Black</h3>
-                        <p class="description">Strong black coffee with double shot.</p>
-                        <p class="price">$4.00</p>
-                    </div>
-                    <div class="item-controls">
-                        <input type="checkbox" name="item" value="Long Black" data-price="4.00" id="item-2">
-                        <select name="qty" disabled>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="menu-item">
-                    <img src="https://images.unsplash.com/photo-1572442388796-11668a67e569?w=200" alt="Cappuccino">
-                    <div class="item-details">
-                        <h3>Cappuccino</h3>
-                        <p class="description">Smooth and creamy cappuccino.</p>
-                        <p class="price">$4.80</p>
-                    </div>
-                    <div class="item-controls">
-                        <input type="checkbox" name="item" value="Cappuccino" data-price="4.80" id="item-3">
-                        <select name="qty" disabled>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="menu-item">
-                    <img src="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=200" alt="Iced Coffee">
-                    <div class="item-details">
-                        <h3>Iced Coffee (Aussie)</h3>
-                        <p class="description">Chilled coffee with a refreshing kick.</p>
-                        <p class="price">$6.50</p>
-                    </div>
-                    <div class="item-controls">
-                        <input type="checkbox" name="item" value="Iced Coffee" data-price="6.50" id="item-4">
-                        <select name="qty" disabled>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                        </select>
-                    </div>
-                </div>
-
+            <!-- Categories / Tabs -->
+            <div id="category-tabs" class="category-tabs" role="tablist">
+                <!-- Dynamic tabs will be inserted here -->
             </div>
 
+            <!-- Loading State -->
+            <div id="menu-loading" class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading menu...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <p>🔍 No items found</p>
+                <small>Try a different search term</small>
+            </div>
+
+            <!-- Menu Items -->
+            <div id="menu-list" class="menu-list">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+
+            <!-- Cart Preview (Collapsible) -->
+            <div id="cart-preview" class="cart-preview" style="display: none;">
+                <button type="button" class="cart-toggle" id="cart-toggle">
+                    <span class="cart-header">
+                        <span>Your Order (<span id="cart-count">0</span> items)</span>
+                        <span class="toggle-icon">▼</span>
+                    </span>
+                </button>
+                <div class="cart-items" id="cart-items">
+                    <!-- Cart items will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Sticky Footer -->
             <div class="sticky-footer">
-                <div class="total">Total: <span id="total-price">$0.00</span></div>
-                <button type="submit" id="submit-btn" disabled>Add to Order</button>
+                <div class="footer-content">
+                    <button type="button" class="cart-icon-btn" id="open-cart-btn" aria-label="Open cart">
+                        🛒
+                        <span class="cart-badge" id="footer-cart-count" style="display: none;">0</span>
+                    </button>
+                    <div class="total-info">
+                        <span class="total-label">Total</span>
+                        <span class="total-price" id="total-price">$0.00</span>
+                    </div>
+                    <button type="submit" id="submit-btn" class="submit-btn" disabled>
+                        <span class="btn-text">Checkout</span>
+                        <span class="btn-icon">→</span>
+                    </button>
+                </div>
             </div>
         </form>
     </div>
+
+    <!-- Cart Modal -->
+    <div class="cart-modal" id="cart-modal">
+        <div class="cart-modal-content">
+            <div class="cart-modal-header">
+                <h2 class="cart-modal-title">Your Cart</h2>
+                <button type="button" class="close-modal-btn" id="close-modal-btn" aria-label="Close cart">✕</button>
+            </div>
+            <div class="cart-modal-body" id="cart-modal-body">
+                <!-- Cart items will be inserted here -->
+            </div>
+            <div class="cart-modal-footer">
+                <div class="cart-summary">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span id="modal-subtotal">$0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total</span>
+                        <span id="modal-total">$0.00</span>
+                    </div>
+                </div>
+                <button type="button" class="checkout-btn" id="modal-checkout-btn" disabled>
+                    <span>Proceed to Checkout</span>
+                    <span>→</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
     <script src="js/app.js"></script>
 </body>

@@ -17,7 +17,7 @@ app.set('trust proxy', 1);
 
 const corsOptions = {
     // Allow your frontend domain
-    origin: ['https://restro-bot.chotkari.com', 'http://localhost:5173', 'http://localhost:3000'],
+    origin: ['https://event-bot.chotkari.com', 'http://localhost:5173', 'http://localhost:3000'],
 
     // Allow cookies/sessions to be sent
     credentials: true,
