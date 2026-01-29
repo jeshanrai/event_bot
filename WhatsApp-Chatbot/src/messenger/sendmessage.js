@@ -202,12 +202,23 @@ export async function sendMessengerButtonTemplate(recipientPsid, text, buttons) 
         payload: {
           template_type: 'button',
           text: text.substring(0, 640),
-          buttons: buttons.slice(0, 3).map(btn => ({
-            type: btn.type || 'postback',
-            title: btn.title.substring(0, 20),
-            payload: btn.payload || btn.title,
-            ...(btn.url && { type: 'web_url', url: btn.url })
-          }))
+          buttons: buttons.slice(0, 3).map(btn => {
+            if (btn.url) {
+              return {
+                type: 'web_url',
+                title: btn.title.substring(0, 20),
+                url: btn.url,
+                webview_height_ratio: btn.webview_height_ratio,
+                messenger_extensions: btn.messenger_extensions,
+                fallback_url: btn.fallback_url
+              };
+            }
+            return {
+              type: btn.type || 'postback',
+              title: btn.title.substring(0, 20),
+              payload: btn.payload || btn.title
+            };
+          })
         }
       }
     }

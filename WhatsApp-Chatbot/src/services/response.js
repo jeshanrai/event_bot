@@ -197,6 +197,11 @@ export async function sendCtaUrlMessage(userId, platform, headerText, bodyText, 
             }
         ];
 
+        console.log('🔗 [DEBUG] Preparing Messenger CTA URL Message:');
+        console.log(`   - User ID: ${userId}`);
+        console.log(`   - URL: ${url}`);
+        console.log(`   - Buttons: ${JSON.stringify(buttons, null, 2)}`);
+
         return await sendMessengerButtonTemplate(userId, `${headerText}\n\n${bodyText}`, buttons);
     }
     // WhatsApp - use CTA URL button
