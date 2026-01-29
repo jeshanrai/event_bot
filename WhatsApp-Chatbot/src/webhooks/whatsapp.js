@@ -22,16 +22,19 @@ export default async function whatsappWebhook(req, res) {
       const userId = message.from;
       const userName = value?.contacts?.[0]?.profile?.name || 'Unknown';
       const messageType = message.type || 'text';
+      const phoneNumberId = value?.metadata?.phone_number_id; // Extract Business Phone Number ID
 
       console.log(`\n━━━ WHATSAPP MESSAGE ━━━`);
       console.log(`📱 From: ${userName} (${userId})`);
+      console.log(`🏢 To Business: ${phoneNumberId}`);
       console.log(`📝 Type: ${messageType}`);
 
       // Build message object for orchestrator
       const msgObject = {
         userId,
         platform: 'whatsapp',
-        type: messageType
+        type: messageType,
+        businessId: phoneNumberId // Pass tenant ID
       };
 
       // Handle different message types
@@ -47,6 +50,12 @@ export default async function whatsappWebhook(req, res) {
         } else if (message.interactive?.type === 'list_reply') {
           msgObject.text = message.interactive.list_reply.title;
           console.log(`📋 List Selection: ${message.interactive.list_reply.title} (${message.interactive.list_reply.id})`);
+        } else if (message.interactive?.type === 'order_details') {
+          // Handle Catalog Cart (Order Details)
+          const orderDetails = message.interactive.order_details;
+          console.log(`🛒 Catalog Cart Received: ${orderDetails.items.length} items`);
+          msgObject.catalogOrder = orderDetails; // Pass full order details to orchestrator
+          msgObject.text = "Sent a cart"; // Fallback text for log/history
         }
       } else if (messageType === 'location') {
         // Handle location shared by user (in response to location_request_message)
@@ -62,7 +71,7 @@ export default async function whatsappWebhook(req, res) {
       }
 
       // Skip if no processable content
-      if (!msgObject.text && !msgObject.interactive) {
+      if (!msgObject.text && !msgObject.interactive && !msgObject.catalogOrder) {
         console.log(`⏭️ Skipping unsupported message type`);
         continue;
       }

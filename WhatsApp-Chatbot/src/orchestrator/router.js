@@ -10,11 +10,42 @@ import {
 } from '../services/response.js';
 import * as restaurantTools from '../tools/restaurant.tools.js';
 
-// Tool execution handlers
 const toolHandlers = {
-  // Step 1: Show food menu webview (CTA URL Button) - Opens menu page in browser
+  // Step 1: Show food menu (DYNAMIC: Catalog or List)
   show_food_menu: async (args, userId, context) => {
     try {
+      // 1. Check if restaurant has catalog enabled
+      const businessId = context.businessId;
+      console.log(`🔍 Checking catalog status for Business ID: ${businessId}`);
+
+      let hasCatalog = false;
+      if (businessId) {
+        const restaurant = await restaurantTools.getRestaurantByPhoneNumberId(businessId);
+        if (restaurant && restaurant.has_catalog) {
+          hasCatalog = true;
+        }
+      }
+
+      if (hasCatalog) {
+        // CASE A: WhatsApp Catalog Mode
+        console.log('✅ Catalog enabled, directing user to catalog.');
+        await sendMessage(
+          userId,
+          context.platform,
+          "🍽️ *View Our Menu*\n\nPlease tap the *Shop/Catalog* button (Store Icon 🏪) at the top of this chat or in the attachment menu to browse our items with images!\n\nSelect items and click *'Send to Business'* to order."
+        );
+
+        return {
+          reply: null,
+          updatedContext: {
+            ...context,
+            stage: 'viewing_catalog',
+            lastAction: 'show_food_menu_catalog'
+          }
+        };
+      }
+
+      // CASE B: Standard List Message Mode (Fallback)
       // Get the base URL from environment or use default
       const baseUrl = process.env.APP_BASE_URL || 'https://your-domain.com';
       const menuUrl = `${baseUrl}/menu.html?userId=${userId}`;
@@ -40,6 +71,194 @@ const toolHandlers = {
     } catch (error) {
       console.error('Error sending menu webview:', error);
       await sendMessage(userId, context.platform, "Sorry, I couldn't load the menu. Please try again.");
+      return { reply: null, updatedContext: context };
+    }
+  },
+
+  // Process items sent from WhatsApp Catalog
+  add_catalog_order: async (args, userId, context) => {
+    try {
+      const catalogItems = args.items || []; // Array of { product_retailer_id, quantity, item_price, currency_amount }
+      const cart = context.cart || [];
+      const addedItems = [];
+      const invalidItems = [];
+
+      console.log(`📦 Processing ${catalogItems.length} catalog items for user ${userId}`);
+
+      for (const item of catalogItems) {
+        const retailerId = item.product_retailer_id;
+        const qty = item.quantity || 1;
+
+        // Verify item exists in OUR database (Source of Truth)
+        const food = await restaurantTools.getFoodByCatalogId(retailerId);
+
+        if (!food) {
+          console.warn(`⚠️ Catalog item ${retailerId} not found in DB`);
+          invalidItems.push(retailerId);
+          continue;
+        }
+
+        // Add to cart (using DB price and ID)
+        const existingItem = cart.find(cartItem => cartItem.foodId === food.id);
+        if (existingItem) {
+          existingItem.quantity += qty;
+        } else {
+          cart.push({
+            foodId: food.id,
+            name: food.name,
+            price: parseFloat(food.price),
+            quantity: qty
+          });
+        }
+
+        addedItems.push({ name: food.name, quantity: qty });
+      }
+
+      if (addedItems.length === 0) {
+        await sendMessage(userId, context.platform, "❌ Sorry, the items you selected are currently unavailable in our system.");
+        return { reply: null, updatedContext: context };
+      }
+
+      // Calculation
+      const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+      // Build success message
+      const addedNames = addedItems.map(i => `• ${i.name} x${i.quantity}`).join('\n');
+
+      const buttons = [
+        {
+          type: 'reply',
+          reply: {
+            id: 'proceed_checkout',
+            title: 'Checkout 🛒'
+          }
+        },
+        {
+          type: 'reply',
+          reply: {
+            id: 'view_all_categories', // Or maybe show catalog direction again
+            title: 'Add More ➕'
+          }
+        }
+      ];
+
+      await sendButtonMessage(
+        userId,
+        context.platform,
+        '✅ Added to Cart',
+        `Received from catalog:\n${addedNames}\n\n🛒 Cart Total: ${itemCount} item(s) - AUD ${total}\n\nWhat would you like to do?`,
+        'Checkout or continue shopping',
+        buttons
+      );
+
+      return {
+        reply: null,
+        updatedContext: {
+          ...context,
+          cart,
+          stage: 'quick_cart_action',
+          lastAction: 'add_catalog_order'
+        }
+      };
+
+    } catch (error) {
+      console.error('Error processing catalog order:', error);
+      await sendMessage(userId, context.platform, "Sorry, there was an error processing your catalog selection.");
+      return { reply: null, updatedContext: context };
+    }
+  },
+
+  // Process items sent from WhatsApp Catalog
+  add_catalog_order: async (args, userId, context) => {
+    try {
+      const catalogItems = args.items || []; // Array of { product_retailer_id, quantity, item_price, currency_amount }
+      const cart = context.cart || [];
+      const addedItems = [];
+      const invalidItems = [];
+
+      console.log(`📦 Processing ${catalogItems.length} catalog items for user ${userId}`);
+
+      for (const item of catalogItems) {
+        const retailerId = item.product_retailer_id;
+        const qty = item.quantity || 1;
+
+        // Verify item exists in OUR database (Source of Truth)
+        const food = await restaurantTools.getFoodByCatalogId(retailerId);
+
+        if (!food) {
+          console.warn(`⚠️ Catalog item ${retailerId} not found in DB`);
+          invalidItems.push(retailerId);
+          continue;
+        }
+
+        // Add to cart (using DB price and ID)
+        const existingItem = cart.find(cartItem => cartItem.foodId === food.id);
+        if (existingItem) {
+          existingItem.quantity += qty;
+        } else {
+          cart.push({
+            foodId: food.id,
+            name: food.name,
+            price: parseFloat(food.price),
+            quantity: qty
+          });
+        }
+
+        addedItems.push({ name: food.name, quantity: qty });
+      }
+
+      if (addedItems.length === 0) {
+        await sendMessage(userId, context.platform, "❌ Sorry, the items you selected are currently unavailable in our system.");
+        return { reply: null, updatedContext: context };
+      }
+
+      // Calculation
+      const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+      // Build success message
+      const addedNames = addedItems.map(i => `• ${i.name} x${i.quantity}`).join('\n');
+
+      const buttons = [
+        {
+          type: 'reply',
+          reply: {
+            id: 'proceed_checkout',
+            title: 'Checkout 🛒'
+          }
+        },
+        {
+          type: 'reply',
+          reply: {
+            id: 'view_all_categories', // Or maybe show catalog direction again
+            title: 'Add More ➕'
+          }
+        }
+      ];
+
+      await sendButtonMessage(
+        userId,
+        context.platform,
+        '✅ Added to Cart',
+        `Received from catalog:\n${addedNames}\n\n🛒 Cart Total: ${itemCount} item(s) - AUD ${total}\n\nWhat would you like to do?`,
+        'Checkout or continue shopping',
+        buttons
+      );
+
+      return {
+        reply: null,
+        updatedContext: {
+          ...context,
+          cart,
+          stage: 'quick_cart_action',
+          lastAction: 'add_catalog_order'
+        }
+      };
+
+    } catch (error) {
+      console.error('Error processing catalog order:', error);
+      await sendMessage(userId, context.platform, "Sorry, there was an error processing your catalog selection.");
       return { reply: null, updatedContext: context };
     }
   },
@@ -1054,11 +1273,17 @@ function parseInteractiveReply(message) {
   return null;
 }
 
-async function routeIntent({ text, context, userId, interactiveReply, location }) {
+async function routeIntent({ text, context, userId, interactiveReply, catalogOrder, location }) {
   console.log(`━━━ ROUTING MESSAGE ━━━`);
   console.log(`📍 Context stage: ${context.stage || 'initial'}`);
 
-  // Handle interactive replies (button clicks, list selections)
+  // 0. Handle Catalog Orders (Direct Tool Call)
+  if (catalogOrder) {
+    console.log(`🛒 Detected Catalog Order with ${catalogOrder.items.length} items`);
+    return await toolHandlers.add_catalog_order({ items: catalogOrder.items }, userId, context);
+  }
+
+  // 1. Handle Interactive Button/List Replies (Deterministic)
   if (interactiveReply) {
     const { id, title } = interactiveReply;
     console.log(`🔘 Interactive reply: ${id} - ${title}`);

@@ -505,6 +505,47 @@ async function updateOrderPaymentStatus(orderId, status) {
   );
 }
 
+/**
+ * Get restaurant details by WhatsApp Phone Number ID (Tenant Resolution)
+ * @param {string} phoneNumberId - The metadata.phone_number_id from webhook
+ * @returns {Promise<Object|null>} - Restaurant object or null
+ */
+async function getRestaurantByPhoneNumberId(phoneNumberId) {
+  // If no specific credentials found, fallback to default restaurant (id=1) for backward compatibility/dev
+  // In production, you might want to enforce strict matching.
+
+  // 1. Try to find strict match
+  const res = await db.query(
+    `SELECT r.* 
+     FROM restaurants r
+     JOIN users u ON r.id = u.restaurant_id
+     JOIN whatsapp_credentials wc ON u.id = wc.user_id
+     WHERE wc.phone_number_id = $1`,
+    [phoneNumberId]
+  );
+
+  if (res.rows.length > 0) return res.rows[0];
+
+  // 2. Fallback (Optional: remove this if you want strict multi-tenancy)
+  // For now, return default restaurant to keep existing bot working
+  console.log(`⚠️ No tenant found for phone_number_id ${phoneNumberId}, using default.`);
+  const defaultRes = await db.query('SELECT * FROM restaurants WHERE id = 1');
+  return defaultRes.rows[0] || null;
+}
+
+/**
+ * Get food item by Catalog Item ID (Retailer ID)
+ * @param {string} catalogItemId - The retailer ID from WhatsApp Catalog
+ * @returns {Promise<Object|null>} - Food item or null
+ */
+async function getFoodByCatalogId(catalogItemId) {
+  const res = await db.query(
+    'SELECT id, name, price, description, category, image_url FROM foods WHERE catalog_item_id = $1 AND available = true',
+    [catalogItemId]
+  );
+  return res.rows[0] || null;
+}
+
 export {
   getMenu,
   getFoodById,
@@ -526,5 +567,7 @@ export {
   clearSessionCart,
   deleteSessionAfterOrder,
   generatePaymentLink,
-  updateOrderPaymentStatus
+  updateOrderPaymentStatus,
+  getRestaurantByPhoneNumberId,
+  getFoodByCatalogId
 };

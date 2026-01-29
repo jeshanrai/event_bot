@@ -9,6 +9,13 @@ async function handleIncomingMessage(message) {
   // Ensure platform is stored in context
   if (message.platform && context.platform !== message.platform) {
     context.platform = message.platform;
+  }
+
+  // Store Business ID in context (Multi-tenant support)
+  // This allows us to know which restaurant the user is interacting with
+  if (message.businessId && context.businessId !== message.businessId) {
+    console.log(`🏢 Switching context to Business ID: ${message.businessId}`);
+    context.businessId = message.businessId;
     await updateContext(userId, context);
   }
 
@@ -17,7 +24,17 @@ async function handleIncomingMessage(message) {
 
   // Add USER message to history
   const history = context.history || [];
-  history.push({ role: 'user', content: message.text || (interactiveReply ? `[Selected: ${interactiveReply.title}]` : '[Media/Other]') });
+  let userContent = message.text;
+
+  if (message.catalogOrder) {
+    userContent = `[Sent Catalog Cart with ${message.catalogOrder.items.length} items]`;
+  } else if (interactiveReply) {
+    userContent = `[Selected: ${interactiveReply.title}]`;
+  } else if (!message.text) {
+    userContent = '[Media/Other]';
+  }
+
+  history.push({ role: 'user', content: userContent });
 
   // Keep last 10 messages
   if (history.length > 10) history.shift();
@@ -27,6 +44,7 @@ async function handleIncomingMessage(message) {
     context,
     userId,
     interactiveReply,
+    catalogOrder: message.catalogOrder, // Pass catalog order details
     location: message.location
   });
 
