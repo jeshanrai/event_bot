@@ -118,7 +118,7 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
   res.send();
 });
 
-// MESSENGER WEBVIEW ORDER ENDPOINT
+// WEBVIEW ORDER ENDPOINT (Multi-Platform)
 app.post('/api/messenger/order', async (req, res) => {
   const { userId, items } = req.body;
 
@@ -135,10 +135,26 @@ app.post('/api/messenger/order', async (req, res) => {
       context = { userId, platform: 'messenger', cart: [] };
     }
 
+    // 2. Detect platform from context or user ID format
+    // WhatsApp user IDs are typically 12-15 digits
+    // Messenger PSIDs are typically 16+ digits
+    let platform = context.platform || 'messenger';
+    if (!context.platform) {
+      // Auto-detect based on user ID length (heuristic)
+      if (userId.length >= 12 && userId.length <= 15) {
+        platform = 'whatsapp';
+        console.log(`🔍 Auto-detected platform: WhatsApp (based on user ID format)`);
+      } else {
+        platform = 'messenger';
+        console.log(`🔍 Auto-detected platform: Messenger (based on user ID format)`);
+      }
+      context.platform = platform;
+    }
+
     let cart = context.cart || [];
     const addedItems = [];
 
-    // 2. Process Items (similar to router.add_multiple_items)
+    // 3. Process Items (similar to router.add_multiple_items)
     for (const item of items) {
       // Search DB for price/name validation
       const matchingStart = await restaurantTools.getFoodByName(item.name);
@@ -161,7 +177,7 @@ app.post('/api/messenger/order', async (req, res) => {
       }
     }
 
-    // 3. Update Context
+    // 4. Update Context
     await updateContext(userId, {
       ...context,
       cart,
@@ -169,17 +185,18 @@ app.post('/api/messenger/order', async (req, res) => {
       lastAction: 'webview_order'
     });
 
-    // 4. Send Confirmation to Messenger
+    // 5. Send Confirmation (Platform-aware)
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const addedItemCount = addedItems.reduce((sum, item) => sum + item.quantity, 0);
 
     const addedText = addedItems.map(i => `✓ ${i.name} x${i.quantity}`).join('\n');
 
     await sendButtonMessage(
       userId,
-      'messenger',
+      platform, // Use detected platform
       '✅ Items Added from Menu!',
-      `${addedText}\n\n🛒 Cart Total: ${itemCount} items | AUD ${total}`,
+      `${addedText}\n\n🛒 Cart Total: ${itemCount} items | AUD ${total.toFixed(2)}`,
       'What next?',
       [
         { type: 'reply', reply: { id: 'view_all_categories', title: 'Add More' } },

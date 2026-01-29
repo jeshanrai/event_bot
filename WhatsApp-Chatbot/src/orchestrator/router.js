@@ -1398,8 +1398,14 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
     }
   }
 
-  // Check for order history keywords
+  // Check for greetings (handle before LLM to save API calls)
   const lowerText = text?.toLowerCase() || '';
+  const greetings = ['hi', 'hii', 'hello', 'hey', 'helo', 'hola', 'good morning', 'good afternoon', 'good evening'];
+  if (greetings.some(greeting => lowerText === greeting || lowerText === `${greeting}!`)) {
+    return await toolHandlers.show_welcome_message({}, userId, context);
+  }
+
+  // Check for order history keywords
   if (lowerText.includes('order history') || lowerText.includes('my orders') || lowerText.includes('past orders') || lowerText.includes('previous orders')) {
     return await toolHandlers.show_order_history({}, userId, context);
   }
