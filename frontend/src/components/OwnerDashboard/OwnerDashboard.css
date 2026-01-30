@@ -1936,3 +1936,253 @@ textarea.form-textarea {
     transform: translateY(-1px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
+
+/* ========================================
+   Connect Your Platforms Section
+   ======================================== */
+
+.connect-tabs {
+    display: flex;
+    gap: 8px;
+    background: #f1f5f9;
+    padding: 6px;
+    border-radius: 14px;
+    margin-bottom: 28px;
+}
+
+.connect-tab {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    flex: 1;
+    justify-content: center;
+}
+
+.connect-tab:hover {
+    color: #334155;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.connect-tab.active {
+    background: white;
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.connect-tab svg {
+    flex-shrink: 0;
+}
+
+.connect-section {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Connected Card Styles */
+.connected-card {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1px solid #bbf7d0;
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+}
+
+.connected-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.connected-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.connected-header svg {
+    flex-shrink: 0;
+}
+
+.connected-header h4 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #166534;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.connected-details {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #dcfce7;
+}
+
+.connected-details p {
+    margin: 0;
+    padding: 10px 0;
+    color: #334155;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.connected-details p:not(:last-child) {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.connected-details p strong {
+    color: #64748b;
+    font-weight: 500;
+    min-width: 140px;
+}
+
+.disconnect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: white;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.disconnect-btn:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+    transform: translateY(-1px);
+}
+
+/* Not Connected State */
+.connect-cta {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 48px 32px;
+    text-align: center;
+}
+
+.connect-cta-icon {
+    width: 64px;
+    height: 64px;
+    background: white;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.connect-cta h4 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+}
+
+.connect-cta p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0 0 24px 0;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.connect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3);
+}
+
+.connect-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4);
+}
+
+.connect-btn.facebook {
+    background: linear-gradient(135deg, #1877F2 0%, #0d5bbd 100%);
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.3);
+}
+
+.connect-btn.facebook:hover {
+    box-shadow: 0 8px 20px rgba(24, 119, 242, 0.4);
+}
+
+/* Connect Info Card */
+.connect-info-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+.connect-info-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+.connect-info-card h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.connect-info-card ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.8;
+}

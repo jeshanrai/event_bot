@@ -34,16 +34,14 @@ app.use((req, res, next) => {
 // Serve static files
 
 // STRIPE WEBHOOK (Must be before express.json() middleware)
-app.post('/stripe-webhook', async (req, res) => {
+// Uses express.raw() to get the raw body buffer for signature verification
+app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
 
   try {
-    // verified raw body is available on req.rawBody
-    if (!req.rawBody) {
-      throw new Error('Raw body not available');
-    }
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    // req.body is now a raw Buffer thanks to express.raw()
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error(`❌ Stripe Webhook Error: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -100,16 +98,6 @@ app.post('/stripe-webhook', async (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
-
-// Use JSON parser with raw body verification for Stripe
-app.use(express.json({
-  verify: (req, res, buf) => {
-    // Capture raw body for Stripe signature verification
-    if (req.originalUrl.startsWith('/stripe-webhook')) {
-      req.rawBody = buf;
-    }
-  }
-}));
 
 // API: Get menu items or categories
 app.get('/api/menu', async (req, res) => {
