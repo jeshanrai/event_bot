@@ -33,8 +33,83 @@ app.use((req, res, next) => {
 
 // Serve static files
 
+// STRIPE WEBHOOK (Must be before express.json() middleware)
+app.post('/stripe-webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    // verified raw body is available on req.rawBody
+    if (!req.rawBody) {
+      throw new Error('Raw body not available');
+    }
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error(`❌ Stripe Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const orderId = session.metadata.orderId;
+
+    console.log(`💰 Payment received for Order #${orderId}`);
+
+    try {
+      // 1. Update order status in database
+      const orderResult = await db.query(
+        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1 RETURNING customer_platform_id, platform",
+        [orderId]
+      );
+      console.log(`✅ Order #${orderId} marked as confirmed/online`);
+
+      // 2. Notify the user
+      if (orderResult.rows.length > 0) {
+        const { customer_platform_id: userId, platform } = orderResult.rows[0];
+
+        // Format order number as 4 digits
+        const orderNumber = String(orderId).padStart(4, '0');
+
+        if (userId && platform) {
+          console.log(`📤 Sending payment confirmation to ${userId} on ${platform}`);
+          await sendMessage(
+            userId,
+            platform,
+            `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`
+          );
+
+          // 3. Clear/Reset User Context
+          // This ensures they don't get stuck in the 'awaiting_payment' stage
+          await updateContext(userId, {
+            stage: 'order_complete',
+            lastAction: 'payment_confirmed_webhook',
+            cart: [],
+            pendingOrder: null
+          });
+          console.log(`🔔 User ${userId} notified and context reset.`);
+        }
+      }
+
+    } catch (error) {
+      console.error(`❌ Error updating order #${orderId}:`, error);
+    }
+  }
+
+  res.send();
+});
+
 app.use(express.static(path.join(__dirname, '..', 'public')));
-app.use(express.json());
+
+// Use JSON parser with raw body verification for Stripe
+app.use(express.json({
+  verify: (req, res, buf) => {
+    // Capture raw body for Stripe signature verification
+    if (req.originalUrl.startsWith('/stripe-webhook')) {
+      req.rawBody = buf;
+    }
+  }
+}));
 
 // API: Get menu items or categories
 app.get('/api/menu', async (req, res) => {
@@ -112,62 +187,7 @@ app.post('/api/cart/:userId', async (req, res) => {
 
 
 
-app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event; // Defines 'event' variable
 
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    console.error(`❌ Stripe Webhook Error: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Handle the event
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const orderId = session.metadata.orderId;
-
-    console.log(`💰 Payment received for Order #${orderId}`);
-
-    try {
-      // 1. Update order status in database
-      const orderResult = await db.query(
-        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1 RETURNING customer_platform_id, platform",
-        [orderId]
-      );
-      console.log(`✅ Order #${orderId} marked as confirmed/online`);
-
-      // 2. Notify the user
-      if (orderResult.rows.length > 0) {
-        const { customer_platform_id: userId, platform } = orderResult.rows[0];
-
-        if (userId && platform) {
-          await sendMessage(
-            userId,
-            platform,
-            `✅ Payment Received!\n\nYour order #${orderId} has been confirmed. We'll verify it shortly and start preparing your food! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`
-          );
-
-          // 3. Clear/Reset User Context
-          // This ensures they don't get stuck in the 'awaiting_payment' stage
-          await updateContext(userId, {
-            stage: 'order_complete',
-            lastAction: 'payment_confirmed_webhook',
-            cart: [],
-            pendingOrder: null
-          });
-          console.log(`🔔 User ${userId} notified and context reset.`);
-        }
-      }
-
-    } catch (error) {
-      console.error(`❌ Error updating order #${orderId}:`, error);
-    }
-  }
-
-  res.send();
-});
 
 // WEBVIEW ORDER ENDPOINT (Multi-Platform)
 app.post('/api/messenger/order', async (req, res) => {
