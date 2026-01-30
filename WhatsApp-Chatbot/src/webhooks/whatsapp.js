@@ -1,9 +1,10 @@
 import { handleIncomingMessage } from '../orchestrator/index.js';
 import { sendWhatsAppMessage } from '../whatsapp/sendmessage.js';
+import TenantResolver from '../utils/tenant.js';
 
 export default async function whatsappWebhook(req, res) {
   console.log('\n🟢 [WHATSAPP WEBHOOK] POST /whatsapp-webhook');
-  console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+  // console.log('📦 Body:', JSON.stringify(req.body, null, 2)); // Too verbose for prod
 
   const object = req.body.object;
 
@@ -18,15 +19,31 @@ export default async function whatsappWebhook(req, res) {
   const messages = value?.messages;
 
   if (Array.isArray(messages)) {
+    // RESOLVE TENANT ONCE PER BATCH (Usually same phone number ID for the batch)
+    const phoneNumberId = value?.metadata?.phone_number_id;
+    let restaurantId = null;
+    let restaurantName = 'Unknown';
+
+    if (phoneNumberId) {
+      const tenant = await TenantResolver.resolveWhatsAppTenant(phoneNumberId);
+      if (tenant) {
+        restaurantId = tenant.id;
+        restaurantName = tenant.name;
+        console.log(`🏢 Tenant Resolved: ${restaurantName} (ID: ${restaurantId})`);
+      } else {
+        console.warn(`⚠️ No tenant found for Phone Number ID: ${phoneNumberId}. Ignoring message.`);
+        return res.sendStatus(200);
+      }
+    }
+
     for (const message of messages) {
       const userId = message.from;
       const userName = value?.contacts?.[0]?.profile?.name || 'Unknown';
       const messageType = message.type || 'text';
-      const phoneNumberId = value?.metadata?.phone_number_id; // Extract Business Phone Number ID
 
       console.log(`\n━━━ WHATSAPP MESSAGE ━━━`);
       console.log(`📱 From: ${userName} (${userId})`);
-      console.log(`🏢 To Business: ${phoneNumberId}`);
+      console.log(`🏢 To Business: ${phoneNumberId} [${restaurantName}]`);
       console.log(`📝 Type: ${messageType}`);
 
       // Build message object for orchestrator
@@ -34,7 +51,9 @@ export default async function whatsappWebhook(req, res) {
         userId,
         platform: 'whatsapp',
         type: messageType,
-        businessId: phoneNumberId // Pass tenant ID
+        businessId: phoneNumberId, // Raw Phone ID
+        restaurantId: restaurantId, // Resolved Restaurant ID
+        restaurantName: restaurantName
       };
 
       // Handle different message types
@@ -58,16 +77,12 @@ export default async function whatsappWebhook(req, res) {
           msgObject.text = "Sent a cart"; // Fallback text for log/history
         }
       } else if (messageType === 'location') {
-        // Handle location shared by user (in response to location_request_message)
+        // Handle location shared by user
         msgObject.location = message.location;
-        // Use address if available, otherwise use coordinates
         const loc = message.location;
         msgObject.text = loc.address || loc.name ||
           `📍 Location: ${loc.latitude}, ${loc.longitude}`;
         console.log(`📍 Location: ${msgObject.text}`);
-        if (loc.latitude && loc.longitude) {
-          console.log(`   Coordinates: ${loc.latitude}, ${loc.longitude}`);
-        }
       }
 
       // Skip if no processable content
@@ -81,12 +96,8 @@ export default async function whatsappWebhook(req, res) {
         console.log(`✅ WhatsApp message processed for ${userId}\n`);
       } catch (error) {
         console.error(`❌ Error processing WhatsApp message:`, error);
-        // Send friendly error message
-        try {
-          await sendWhatsAppMessage(userId, "Currently chat unavailable, please call for details.");
-        } catch (sendErr) {
-          console.error('Failed to send error notification:', sendErr);
-        }
+        // Send friendly error message (Optional: verify if we should send error to user)
+        // await sendWhatsAppMessage(userId, "Sorry, I encountered an error. Please try again.");
       }
     }
   }

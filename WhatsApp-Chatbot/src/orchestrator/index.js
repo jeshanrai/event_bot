@@ -14,9 +14,26 @@ async function handleIncomingMessage(message) {
   // Store Business ID in context (Multi-tenant support)
   // This allows us to know which restaurant the user is interacting with
   if (message.businessId && context.businessId !== message.businessId) {
-    console.log(`🏢 Switching context to Business ID: ${message.businessId}`);
     context.businessId = message.businessId;
+  }
+
+  if (message.restaurantId) {
+    if (context.restaurantId !== message.restaurantId) {
+      console.log(`🏢 Switching context to Restaurant ID: ${message.restaurantId}`);
+      context.restaurantId = message.restaurantId;
+    }
+    // Also update name if available
+    if (message.restaurantName) {
+      context.restaurantName = message.restaurantName;
+    }
+
+    // Persist immediately
     await updateContext(userId, context);
+  } else if (!context.restaurantId) {
+    // Fallback: If no restaurantId in message OR context, try to resolve one last time (or default)
+    // For now, let's assume webhooks are doing their job.
+    // Ideally we might want to throw or log strict warning here.
+    console.warn(`⚠️ No Restaurant ID in context for user ${userId}`);
   }
 
   // Check for interactive reply (button click or list selection)

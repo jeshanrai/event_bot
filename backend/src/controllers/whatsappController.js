@@ -1,160 +1,167 @@
 const axios = require('axios');
 const WhatsAppCredentials = require('../models/whatsappModel');
 
-// Exchange authorization code for access token
+// Exchange short-lived access token for long-lived token (Embedded Signup flow)
 const connectWhatsApp = async (req, res) => {
     try {
-        const { code, access_token: shortLivedToken } = req.body;
+        const { access_token: shortLivedToken } = req.body;
         const userId = req.user.id; // From auth middleware
+        const restaurantId = req.user.restaurant_id; // Restaurant ID from logged-in user
 
-        if (!code && !shortLivedToken) {
+        if (!shortLivedToken) {
             return res.status(400).json({
                 success: false,
-                message: 'Authorization code or Access Token is required'
+                message: 'Access Token is required'
             });
         }
 
         let access_token;
         let token_expires_in = null;
 
-        if (code) {
-            // Exchange code for access token with Facebook Graph API
-            // redirect_uri must match exactly what's in Facebook App OAuth settings
-            const redirectUri = process.env.FACEBOOK_REDIRECT_URI ||
-                process.env.FRONTEND_URL || 'https://restro-bot.chotkari.com/dashboard';
+        // Exchange short-lived token for long-lived token
+        console.log('Exchanging short-lived token for long-lived token...');
+        const exchangeResponse = await axios.get('https://graph.facebook.com/v24.0/oauth/access_token', {
+            params: {
+                grant_type: 'fb_exchange_token',
+                client_id: process.env.FACEBOOK_APP_ID,
+                client_secret: process.env.FACEBOOK_APP_SECRET,
+                fb_exchange_token: shortLivedToken
+            }
+        });
+        access_token = exchangeResponse.data.access_token;
+        token_expires_in = exchangeResponse.data.expires_in;
+        console.log('Successfully exchanged for long-lived token');
 
-            const tokenResponse = await axios.get('https://graph.facebook.com/v24.0/oauth/access_token', {
-                params: {
-                    client_id: process.env.FACEBOOK_APP_ID,
-                    client_secret: process.env.FACEBOOK_APP_SECRET,
-                    code: code,
-                    redirect_uri: redirectUri
-                }
-            });
-            access_token = tokenResponse.data.access_token;
-            token_expires_in = tokenResponse.data.expires_in;
-        } else if (shortLivedToken) {
-            // Exchange short-lived token for long-lived token
-            const exchangeResponse = await axios.get('https://graph.facebook.com/v24.0/oauth/access_token', {
-                params: {
-                    grant_type: 'fb_exchange_token',
-                    client_id: process.env.FACEBOOK_APP_ID,
-                    client_secret: process.env.FACEBOOK_APP_SECRET,
-                    fb_exchange_token: shortLivedToken
-                }
-            });
-            access_token = exchangeResponse.data.access_token;
-            token_expires_in = exchangeResponse.data.expires_in;
-        }
-
-        let wabaId = req.body.waba_id;
+        const wabaId = req.body.waba_id;
         const providedPhoneId = req.body.phone_number_id;
 
-        // If WABA ID is not provided, try to fetch it
-        if (!wabaId) {
-            try {
-                // Check businesses the user belongs to
-                console.log('Searching for WABA in businesses...');
-                const businessesResponse = await axios.get('https://graph.facebook.com/v24.0/me/businesses', {
-                    params: {
-                        fields: 'owned_whatsapp_business_accounts,client_whatsapp_business_accounts',
-                        access_token: access_token
-                    }
-                });
-
-                const businesses = businessesResponse.data.data;
-                if (businesses && businesses.length > 0) {
-                    for (const business of businesses) {
-                        // Check owned accounts
-                        if (business.owned_whatsapp_business_accounts?.data?.length > 0) {
-                            wabaId = business.owned_whatsapp_business_accounts.data[0].id;
-                            console.log('Found WABA in owned accounts:', wabaId);
-                            break;
-                        }
-                        // Check client accounts
-                        if (business.client_whatsapp_business_accounts?.data?.length > 0) {
-                            wabaId = business.client_whatsapp_business_accounts.data[0].id;
-                            console.log('Found WABA in client accounts:', wabaId);
-                            break;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.log('Error searching for WABA:', err.response?.data || err.message);
-            }
-        }
-
-        if (!wabaId && !providedPhoneId) {
-            return res.status(400).json({
-                success: false,
-                message: 'No WhatsApp Business Account found. Please ensure you completed the signup steps.'
-            });
-        }
-
-        // Get phone number details
-        // If we have a specific phone ID, use that. Otherwise list all numbers from WABA.
-        let phoneData = {};
-
-        if (providedPhoneId) {
-            const phoneResponse = await axios.get(
-                `https://graph.facebook.com/v24.0/${providedPhoneId}`,
-                {
-                    params: {
-                        fields: 'id,verified_name,display_phone_number,quality_rating',
-                        access_token
-                    }
-                }
-            );
-            phoneData = phoneResponse.data;
-            if (!wabaId) {
-                // Try to infer WABA from phone number if we didn't have it? 
-                // (Not easily possible, but we can proceed with just phone ID if WABA isn't strictly needed for sending messages, 
-                // though it is needed for templates. For now, we assume we might lack it if the user didn't send it.)
-            }
-        } else if (wabaId) {
-            const phoneResponse = await axios.get(
-                `https://graph.facebook.com/v24.0/${wabaId}/phone_numbers`,
-                {
-                    params: { access_token }
-                }
-            );
-            phoneData = phoneResponse.data.data?.[0] || {};
-        }
-
-        if (!phoneData.id) {
-            return res.status(400).json({
-                success: false,
-                message: 'No WhatsApp Phone Number found.'
-            });
-        }
+        console.log('Received from frontend - WABA ID:', wabaId, 'Phone ID:', providedPhoneId);
 
         // Calculate token expiration from API response or default to 60 days
         const expiresAt = new Date();
         if (token_expires_in) {
-            // expires_in is in seconds, convert to milliseconds
             expiresAt.setTime(expiresAt.getTime() + (token_expires_in * 1000));
         } else {
-            // Fallback to 60 days if expires_in not provided
             expiresAt.setDate(expiresAt.getDate() + 60);
         }
 
-        // Store credentials in database
-        const credentials = await WhatsAppCredentials.upsert(userId, {
+        // If WABA/Phone not provided, save token with PENDING status
+        // This allows users to complete signup later
+        if (!wabaId && !providedPhoneId) {
+            console.log('WABA/Phone not provided - saving token with PENDING status');
+
+            const credentials = await WhatsAppCredentials.upsert(userId, restaurantId, {
+                access_token,
+                phone_number_id: null,
+                whatsapp_business_account_id: null,
+                expires_at: expiresAt,
+                phone_number: null,
+                display_phone_number: null,
+                quality_rating: null,
+                status: 'pending_signup'
+            });
+
+            return res.json({
+                success: true,
+                message: 'Token saved. Please complete WhatsApp Business signup to finish setup.',
+                data: {
+                    status: 'pending_signup',
+                    connected_at: credentials.connected_at
+                }
+            });
+        }
+
+        // Get phone number details if phone ID is provided
+        let phoneData = {};
+
+        if (providedPhoneId) {
+            try {
+                console.log('Fetching phone number details for:', providedPhoneId);
+                const phoneResponse = await axios.get(
+                    `https://graph.facebook.com/v24.0/${providedPhoneId}`,
+                    {
+                        params: {
+                            fields: 'id,verified_name,display_phone_number,quality_rating',
+                            access_token
+                        }
+                    }
+                );
+                phoneData = phoneResponse.data;
+                console.log('Phone data retrieved:', phoneData);
+            } catch (phoneErr) {
+                console.log('Error fetching phone details:', phoneErr.response?.data || phoneErr.message);
+                // Continue with provided phone ID even if details fetch fails
+                phoneData = { id: providedPhoneId };
+            }
+        } else if (wabaId) {
+            // If only WABA ID provided, try to get phone numbers from WABA
+            try {
+                console.log('Fetching phone numbers from WABA:', wabaId);
+                const phoneResponse = await axios.get(
+                    `https://graph.facebook.com/v24.0/${wabaId}/phone_numbers`,
+                    {
+                        params: { access_token }
+                    }
+                );
+                phoneData = phoneResponse.data.data?.[0] || {};
+                console.log('Phone data from WABA:', phoneData);
+            } catch (wabaErr) {
+                console.log('Error fetching phones from WABA:', wabaErr.response?.data || wabaErr.message);
+                // Save with WABA only, phone pending
+                phoneData = {};
+            }
+        }
+
+        // If still no phone data, save with what we have
+        if (!phoneData.id && wabaId) {
+            console.log('No phone number found, saving with WABA only');
+
+            const credentials = await WhatsAppCredentials.upsert(userId, restaurantId, {
+                access_token,
+                phone_number_id: null,
+                whatsapp_business_account_id: wabaId,
+                expires_at: expiresAt,
+                phone_number: null,
+                display_phone_number: null,
+                quality_rating: null,
+                status: 'pending_phone'
+            });
+
+            return res.json({
+                success: true,
+                message: 'WhatsApp Business Account connected. Phone number setup pending.',
+                data: {
+                    status: 'pending_phone',
+                    waba_id: wabaId,
+                    connected_at: credentials.connected_at
+                }
+            });
+        }
+
+        // Store credentials in database - full connection with phone number
+        const credentials = await WhatsAppCredentials.upsert(userId, restaurantId, {
             access_token,
             phone_number_id: phoneData.id,
-            whatsapp_business_account_id: wabaId || 'unknown_waba',
+            whatsapp_business_account_id: wabaId || null,
             expires_at: expiresAt,
-            phone_number: phoneData.verified_name,
-            display_phone_number: phoneData.display_phone_number,
-            quality_rating: phoneData.quality_rating
+            phone_number: phoneData.verified_name || null,
+            display_phone_number: phoneData.display_phone_number || null,
+            quality_rating: phoneData.quality_rating || null,
+            status: 'active'
         });
+
+        // Generate webhook URL
+        const webhookUrl = `${process.env.BACKEND_URL || 'https://api.chotkari.com'}/webhook/whatsapp/${phoneData.id}`;
+        await WhatsAppCredentials.updateWebhookUrl(credentials.id, webhookUrl);
 
         res.json({
             success: true,
             message: 'WhatsApp connected successfully',
             data: {
+                id: credentials.id,
                 phone_number: credentials.display_phone_number,
                 quality_rating: credentials.quality_rating,
+                webhook_url: webhookUrl,
                 connected_at: credentials.connected_at
             }
         });
@@ -169,7 +176,7 @@ const connectWhatsApp = async (req, res) => {
     }
 };
 
-// Get connection status
+// Get connection status (backward compatibility - returns first active)
 const getConnectionStatus = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -191,8 +198,10 @@ const getConnectionStatus = async (req, res) => {
             success: true,
             connected: !isExpired,
             data: {
+                id: credentials.id,
                 phone_number: credentials.display_phone_number,
                 quality_rating: credentials.quality_rating,
+                webhook_url: credentials.webhook_url,
                 connected_at: credentials.connected_at,
                 last_verified: credentials.last_verified_at,
                 expires_at: credentials.expires_at,
@@ -210,7 +219,45 @@ const getConnectionStatus = async (req, res) => {
     }
 };
 
-// Disconnect WhatsApp
+// List all WhatsApp accounts for the restaurant
+const listWhatsAppAccounts = async (req, res) => {
+    try {
+        const restaurantId = req.user.restaurant_id;
+
+        const accounts = await WhatsAppCredentials.findByRestaurantId(restaurantId);
+
+        // Check expiration for each account
+        const accountsWithStatus = accounts.map(acc => {
+            const isExpired = acc.expires_at && new Date(acc.expires_at) < new Date();
+            return {
+                id: acc.id,
+                phone_number: acc.display_phone_number,
+                phone_number_id: acc.phone_number_id,
+                quality_rating: acc.quality_rating,
+                status: isExpired ? 'expired' : acc.status,
+                is_active: acc.is_active && !isExpired,
+                webhook_url: acc.webhook_url,
+                connected_at: acc.connected_at,
+                expires_at: acc.expires_at
+            };
+        });
+
+        res.json({
+            success: true,
+            data: accountsWithStatus
+        });
+
+    } catch (error) {
+        console.error('List accounts error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to list WhatsApp accounts',
+            error: error.message
+        });
+    }
+};
+
+// Disconnect WhatsApp (backward compatibility - disconnects all)
 const disconnectWhatsApp = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -234,6 +281,38 @@ const disconnectWhatsApp = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to disconnect WhatsApp',
+            error: error.message
+        });
+    }
+};
+
+// Disconnect specific WhatsApp account by ID
+const disconnectWhatsAppAccount = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const restaurantId = req.user.restaurant_id;
+
+        // Verify account belongs to this restaurant
+        const account = await WhatsAppCredentials.findById(id);
+        if (!account || account.restaurant_id !== restaurantId) {
+            return res.status(404).json({
+                success: false,
+                message: 'WhatsApp account not found'
+            });
+        }
+
+        await WhatsAppCredentials.deactivateById(id);
+
+        res.json({
+            success: true,
+            message: 'WhatsApp account disconnected successfully'
+        });
+
+    } catch (error) {
+        console.error('Disconnect account error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to disconnect WhatsApp account',
             error: error.message
         });
     }
@@ -297,6 +376,9 @@ const verifyConnection = async (req, res) => {
 module.exports = {
     connectWhatsApp,
     getConnectionStatus,
+    listWhatsAppAccounts,
     disconnectWhatsApp,
+    disconnectWhatsAppAccount,
     verifyConnection
 };
+

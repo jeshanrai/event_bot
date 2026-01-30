@@ -1,5 +1,6 @@
 import { handleIncomingMessage } from '../orchestrator/index.js';
 import { sendMessengerSenderAction, sendMessengerMessage } from '../messenger/sendmessage.js';
+import TenantResolver from '../utils/tenant.js';
 
 /**
  * Extract message text from various Messenger message types
@@ -44,7 +45,7 @@ export default async function messengerWebhook(req, res) {
   const body = req.body;
 
   console.log('\n🟦 [MESSENGER WEBHOOK RECEIVED]');
-  console.log('📦 Body:', JSON.stringify(body, null, 2));
+  // console.log('📦 Body:', JSON.stringify(body, null, 2));
 
   // Verify this is a page subscription
   if (body.object !== 'page') {
@@ -58,10 +59,27 @@ export default async function messengerWebhook(req, res) {
   // Process each entry (there may be multiple if batched)
   for (const entry of body.entry || []) {
     const webhookEvents = entry.messaging || [];
+    const pageId = entry.id; // Page ID is at entry level
+
+    // RESOLVE TENANT for this entry/page
+    let restaurantId = null;
+    let restaurantName = 'Unknown';
+
+    if (pageId) {
+      const tenant = await TenantResolver.resolveMessengerTenant(pageId);
+      if (tenant) {
+        restaurantId = tenant.id;
+        restaurantName = tenant.name;
+        console.log(`🏢 Tenant Resolved: ${restaurantName} (ID: ${restaurantId})`);
+      } else {
+        console.warn(`⚠️ No tenant found for Page ID: ${pageId}. Ignoring event.`);
+        continue;
+      }
+    }
 
     for (const event of webhookEvents) {
       const senderPsid = event.sender?.id;
-      const recipientId = event.recipient?.id;
+      const recipientId = event.recipient?.id; // Should match pageId
       const timestamp = event.timestamp;
 
       if (!senderPsid) {
@@ -71,20 +89,26 @@ export default async function messengerWebhook(req, res) {
 
       console.log(`\n━━━ MESSENGER MESSAGE ━━━`);
       console.log(`📱 From PSID: ${senderPsid}`);
-      console.log(`📍 To Page: ${recipientId}`);
+      console.log(`📍 To Page: ${recipientId} [${restaurantName}]`);
       console.log(`🕐 Timestamp: ${new Date(timestamp).toISOString()}`);
 
       try {
         // Send typing indicator
         await sendMessengerSenderAction(senderPsid, 'typing_on');
 
+        const contextData = {
+          restaurantId,
+          restaurantName,
+          businessId: pageId
+        };
+
         // Handle different event types
         if (event.message) {
-          await handleMessengerMessage(senderPsid, event.message);
+          await handleMessengerMessage(senderPsid, event.message, contextData);
         } else if (event.postback) {
-          await handleMessengerPostback(senderPsid, event.postback);
+          await handleMessengerPostback(senderPsid, event.postback, contextData);
         } else if (event.referral) {
-          await handleMessengerReferral(senderPsid, event.referral);
+          await handleMessengerReferral(senderPsid, event.referral, contextData);
         } else if (event.read) {
           console.log(`👁️ Message read at: ${event.read.watermark}`);
         } else if (event.delivery) {
@@ -106,7 +130,7 @@ export default async function messengerWebhook(req, res) {
 /**
  * Handle incoming Messenger text/media messages
  */
-async function handleMessengerMessage(senderPsid, receivedMessage) {
+async function handleMessengerMessage(senderPsid, receivedMessage, contextData = {}) {
   const messageId = receivedMessage.mid;
   const text = extractMessageText(receivedMessage);
   const isQuickReply = !!receivedMessage.quick_reply;
@@ -126,7 +150,8 @@ async function handleMessengerMessage(senderPsid, receivedMessage) {
     platform: 'messenger',
     type: isQuickReply ? 'quick_reply' : 'text',
     text: text,
-    messageId: messageId
+    messageId: messageId,
+    ...contextData // Spread tenant info
   };
 
   // Handle quick replies as interactive selections
@@ -149,7 +174,7 @@ async function handleMessengerMessage(senderPsid, receivedMessage) {
 /**
  * Handle Messenger postback events (button clicks)
  */
-async function handleMessengerPostback(senderPsid, receivedPostback) {
+async function handleMessengerPostback(senderPsid, receivedPostback, contextData = {}) {
   const payload = extractPostbackPayload(receivedPostback);
   const title = receivedPostback.title;
 
@@ -168,7 +193,8 @@ async function handleMessengerPostback(senderPsid, receivedPostback) {
         type: 'postback',
         payload: 'GET_STARTED',
         title: 'Get Started'
-      }
+      },
+      ...contextData
     };
 
     try {
@@ -190,7 +216,8 @@ async function handleMessengerPostback(senderPsid, receivedPostback) {
       type: 'postback',
       payload: payload,
       title: title
-    }
+    },
+    ...contextData
   };
 
   try {

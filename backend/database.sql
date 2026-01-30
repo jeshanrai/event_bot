@@ -124,48 +124,76 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 -- =========================
--- 7. CREDENTIALS (BACKEND SPECIFIC)
+-- 7. CREDENTIALS (MULTI-ACCOUNT SUPPORT)
 -- =========================
 
+-- WhatsApp Credentials (Multi-Account per Restaurant)
 CREATE TABLE IF NOT EXISTS whatsapp_credentials (
-    user_id VARCHAR(50) PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+    
+    -- WhatsApp Business API credentials
     access_token TEXT NOT NULL,
-    phone_number_id VARCHAR(50) NOT NULL,
-    whatsapp_business_account_id VARCHAR(50) NOT NULL,
+    phone_number_id VARCHAR(50) NOT NULL UNIQUE,
+    whatsapp_business_account_id VARCHAR(50),
     expires_at TIMESTAMP,
+    
+    -- Phone number details
     phone_number VARCHAR(50),
     display_phone_number VARCHAR(50),
     quality_rating VARCHAR(50),
+    
+    -- Connection status
+    status VARCHAR(50) DEFAULT 'active' 
+        CHECK (status IN ('active', 'pending_signup', 'pending_phone', 'expired', 'inactive')),
     is_active BOOLEAN DEFAULT true,
+    
+    -- Webhook configuration
+    webhook_url TEXT,
+    
+    -- Timestamps
     connected_at TIMESTAMP DEFAULT NOW(),
     last_verified_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Facebook Credentials (Multi-Account per Restaurant)
 CREATE TABLE IF NOT EXISTS facebook_credentials (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
     
     -- Facebook Page credentials
-    page_id VARCHAR(255) NOT NULL,
+    page_id VARCHAR(255) NOT NULL UNIQUE,
     page_name VARCHAR(255),
     page_access_token TEXT NOT NULL,
     
     -- Connection status
+    status VARCHAR(50) DEFAULT 'active'
+        CHECK (status IN ('active', 'expired', 'inactive')),
     is_active BOOLEAN DEFAULT true,
+    
+    -- Webhook configuration
+    webhook_url TEXT,
+    
+    -- Timestamps
     connected_at TIMESTAMP DEFAULT NOW(),
-    
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    
-    UNIQUE(user_id),
-    UNIQUE(page_id)
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_whatsapp_user_id ON whatsapp_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_restaurant_id ON whatsapp_credentials(restaurant_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_phone_number_id ON whatsapp_credentials(phone_number_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_is_active ON whatsapp_credentials(is_active);
+
 CREATE INDEX IF NOT EXISTS idx_facebook_user_id ON facebook_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_facebook_restaurant_id ON facebook_credentials(restaurant_id);
 CREATE INDEX IF NOT EXISTS idx_facebook_page_id ON facebook_credentials(page_id);
-CREATE INDEX IF NOT EXISTS idx_whatsapp_credentials_user_id ON whatsapp_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_facebook_is_active ON facebook_credentials(is_active);
 
 -- =========================
 -- 8. DEFAULT SEED DATA
@@ -173,3 +201,4 @@ CREATE INDEX IF NOT EXISTS idx_whatsapp_credentials_user_id ON whatsapp_credenti
 INSERT INTO restaurants (name, address, contact_number) VALUES
 ('Momo House', 'Kathmandu, Nepal', '+977-9800000000')
 ON CONFLICT DO NOTHING;
+

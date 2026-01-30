@@ -1,0 +1,69 @@
+import db from '../db.js';
+
+/**
+ * Tenant Resolver Utility
+ * Helps identify which restaurant a message belongs to based on platform metadata.
+ */
+const TenantResolver = {
+    /**
+     * Resolve Restaurant ID from WhatsApp Phone Number ID
+     * @param {string} phoneNumberId - The metadata.phone_number_id from webhook
+     * @returns {Promise<Object>} - Restaurant details { id, name, webhook_url }
+     */
+    resolveWhatsAppTenant: async (phoneNumberId) => {
+        if (!phoneNumberId) return null;
+
+        try {
+            // 1. Try to find strict match in credentials
+            const res = await db.query(
+                `SELECT r.id, r.name, wc.webhook_url
+         FROM whatsapp_credentials wc
+         JOIN restaurants r ON wc.restaurant_id = r.id
+         WHERE wc.phone_number_id = $1 AND wc.is_active = true`,
+                [phoneNumberId]
+            );
+
+            if (res.rows.length > 0) {
+                return res.rows[0];
+            }
+
+            console.warn(`⚠️ TenantResolver: No active WhatsApp credential found for ${phoneNumberId}`);
+            return null;
+        } catch (error) {
+            console.error('❌ TenantResolver WhatsApp Error:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Resolve Restaurant ID from Facebook Page ID
+     * @param {string} pageId - The recipient.id from webhook
+     * @returns {Promise<Object>} - Restaurant details { id, name, webhook_url }
+     */
+    resolveMessengerTenant: async (pageId) => {
+        if (!pageId) return null;
+
+        try {
+            // 1. Try to find strict match
+            const res = await db.query(
+                `SELECT r.id, r.name, fc.webhook_url
+         FROM facebook_credentials fc
+         JOIN restaurants r ON fc.restaurant_id = r.id
+         WHERE fc.page_id = $1 AND fc.is_active = true`,
+                [pageId]
+            );
+
+            if (res.rows.length > 0) {
+                return res.rows[0];
+            }
+
+            console.warn(`⚠️ TenantResolver: No active Facebook credential found for Page ID ${pageId}`);
+            return null;
+        } catch (error) {
+            console.error('❌ TenantResolver Messenger Error:', error);
+            return null;
+        }
+    }
+};
+
+export default TenantResolver;

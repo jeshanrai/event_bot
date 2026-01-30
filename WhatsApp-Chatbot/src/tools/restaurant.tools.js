@@ -15,23 +15,27 @@ dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
- * Get menu categories or items by category
+ * Get menu categories or items by category for a specific restaurant
  * @param {string|null} category - Optional category to filter by
+ * @param {number} restaurantId - Restaurant ID
  * @returns {Promise<Array>} - Array of categories or food items
  */
-async function getMenu(category = null) {
+async function getMenu(category = null, restaurantId) {
+  if (!restaurantId) throw new Error('Restaurant ID is required for getMenu');
+
   if (!category) {
-    // Return all distinct categories
+    // Return all distinct categories for this restaurant
     const res = await db.query(
-      'SELECT DISTINCT category FROM foods WHERE available = true ORDER BY category'
+      'SELECT DISTINCT category FROM foods WHERE restaurant_id = $1 AND available = true ORDER BY category',
+      [restaurantId]
     );
     return res.rows;
   }
 
-  // Return food items for specific category
+  // Return food items for specific category and restaurant
   const res = await db.query(
-    'SELECT id, name, price, description, image_url FROM foods WHERE category = $1 AND available = true ORDER BY name',
-    [category]
+    'SELECT id, name, price, description, image_url FROM foods WHERE restaurant_id = $1 AND category = $2 AND available = true ORDER BY name',
+    [restaurantId, category]
   );
   return res.rows;
 }
@@ -43,39 +47,54 @@ async function getMenu(category = null) {
  */
 async function getFoodById(foodId) {
   const res = await db.query(
-    'SELECT id, name, price, description, category, image_url FROM foods WHERE id = $1 AND available = true',
+    'SELECT id, name, price, description, category, image_url, restaurant_id FROM foods WHERE id = $1 AND available = true',
     [foodId]
   );
   return res.rows[0] || null;
 }
 
 /**
- * Get a food item by name (case-insensitive partial match)
+ * Get a food item by name (case-insensitive partial match) within a restaurant
  * @param {string} name - Food name to search
+ * @param {number} restaurantId - Restaurant ID
  * @returns {Promise<Array>} - Matching food items
  */
-async function getFoodByName(name) {
+async function getFoodByName(name, restaurantId) {
+  if (!restaurantId) {
+    // Fallback for legacy calls without restaurantId, search generally but warn
+    console.warn('getFoodByName called without restaurantId, searching all foods');
+    const res = await db.query(
+      'SELECT id, name, price, description, category, image_url FROM foods WHERE LOWER(name) LIKE LOWER($1) AND available = true',
+      [`%${name}%`]
+    );
+    return res.rows;
+  }
+
   const res = await db.query(
-    'SELECT id, name, price, description, category, image_url FROM foods WHERE LOWER(name) LIKE LOWER($1) AND available = true',
-    [`%${name}%`]
+    'SELECT id, name, price, description, category, image_url FROM foods WHERE restaurant_id = $1 AND LOWER(name) LIKE LOWER($2) AND available = true',
+    [restaurantId, `%${name}%`]
   );
   return res.rows;
 }
 
 /**
- * Get recommended food items based on tag/keyword
+ * Get recommended food items based on tag/keyword for a restaurant
  * @param {string} tag - Tag or keyword (e.g., "spicy", "soup", "veg")
+ * @param {number} restaurantId - Restaurant ID
  * @returns {Promise<Array>} - Matching food items
  */
-async function getRecommendedFoods(tag) {
+async function getRecommendedFoods(tag, restaurantId) {
+  if (!restaurantId) throw new Error('Restaurant ID is required for getRecommendedFoods');
+
   if (!tag || tag === 'random') {
     // Random selection
     const res = await db.query(
       `SELECT id, name, price, description, category, image_url 
        FROM foods 
-       WHERE available = true 
+       WHERE restaurant_id = $1 AND available = true 
        ORDER BY RANDOM() 
-       LIMIT 1`
+       LIMIT 1`,
+      [restaurantId]
     );
     return res.rows;
   }
@@ -84,15 +103,15 @@ async function getRecommendedFoods(tag) {
   const res = await db.query(
     `SELECT id, name, price, description, category, image_url 
      FROM foods 
-     WHERE available = true 
+     WHERE restaurant_id = $1 AND available = true 
      AND (
-       LOWER(name) LIKE LOWER($1) OR 
-       LOWER(description) LIKE LOWER($1) OR 
-       LOWER(category) LIKE LOWER($1)
+       LOWER(name) LIKE LOWER($2) OR 
+       LOWER(description) LIKE LOWER($2) OR 
+       LOWER(category) LIKE LOWER($2)
      )
      ORDER BY name
      LIMIT 5`,
-    [searchTerm]
+    [restaurantId, searchTerm]
   );
   return res.rows;
 }
@@ -100,12 +119,15 @@ async function getRecommendedFoods(tag) {
 /**
  * Create a new order for a WhatsApp user
  * @param {string} userWaId - WhatsApp user ID
+ * @param {number} restaurantId - Restaurant ID
  * @returns {Promise<Object>} - Created order with id
  */
-async function createOrder(userWaId) {
+async function createOrder(userWaId, restaurantId) {
+  if (!restaurantId) throw new Error('Restaurant ID is required for createOrder');
+
   const res = await db.query(
-    'INSERT INTO orders (customer_platform_id, restaurant_id, status, created_at) VALUES ($1, 1, $2, NOW()) RETURNING id, status, created_at',
-    [userWaId, 'created']
+    'INSERT INTO orders (customer_platform_id, restaurant_id, status, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, status, created_at',
+    [userWaId, restaurantId, 'created']
   );
   return res.rows[0];
 }
@@ -117,7 +139,7 @@ async function createOrder(userWaId) {
  */
 async function getActiveOrder(userWaId) {
   const res = await db.query(
-    `SELECT id, status, payment_method, created_at 
+    `SELECT id, status, payment_method, created_at, restaurant_id 
      FROM orders 
      WHERE customer_platform_id = $1 AND status NOT IN ('completed', 'cancelled') 
      ORDER BY created_at DESC 
@@ -311,9 +333,12 @@ async function getOrderHistory(userWaId, limit = 5) {
 /**
  * Get category image (first item's image from category)
  * @param {string} category - Category name
+ * @param {number} restaurantId - Restaurant ID (optional, but good for future)
  * @returns {Promise<string|null>} - Image URL or null
  */
 async function getCategoryImage(category) {
+  // This query might need restaurant_id if categories are restaurant specific per table
+  // Assuming categories are unique per restaurant in foods table
   const res = await db.query(
     'SELECT image_url FROM foods WHERE category = $1 AND available = true AND image_url IS NOT NULL LIMIT 1',
     [category]
@@ -326,13 +351,16 @@ async function getCategoryImage(category) {
  * Transfers cart items from sessions table to orders + order_items tables
  * @param {string} userId - WhatsApp user ID
  * @param {Array} cart - Cart items from session
- * @param {Object} orderDetails - Additional order details (service_type, delivery_address, etc.)
+ * @param {Object} orderDetails - Additional order details (service_type, delivery_address, restaurant_id, etc.)
  * @returns {Promise<Object>} - Created order with id, status, and total
  */
 async function finalizeOrderFromCart(userId, cart, orderDetails = {}) {
   if (!cart || cart.length === 0) {
     throw new Error('Cart is empty. Cannot create order.');
   }
+
+  // Ensure restaurantId is available
+  const restaurantId = orderDetails.restaurantId || orderDetails.restaurant_id || 1; // Default to 1 if not provided (fallback)
 
   try {
     // Map payment method values to database acceptable values
@@ -352,10 +380,11 @@ async function finalizeOrderFromCart(userId, cart, orderDetails = {}) {
     // 1. Create order
     const orderRes = await db.query(
       `INSERT INTO orders (customer_platform_id, restaurant_id, status, service_type, payment_method, platform, created_at) 
-       VALUES ($1, 1, $2, $3, $4, $5, NOW()) 
+       VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
        RETURNING id, status, created_at`,
       [
         userId,
+        restaurantId,
         'created',
         orderDetails.service_type || 'dine_in', // Explicitly defaulting to dine_in as requested
         dbPaymentMethod,
@@ -511,23 +540,20 @@ async function updateOrderPaymentStatus(orderId, status) {
  * @returns {Promise<Object|null>} - Restaurant object or null
  */
 async function getRestaurantByPhoneNumberId(phoneNumberId) {
-  // If no specific credentials found, fallback to default restaurant (id=1) for backward compatibility/dev
-  // In production, you might want to enforce strict matching.
-
-  // 1. Try to find strict match
-  const res = await db.query(
-    `SELECT r.* 
-     FROM restaurants r
-     JOIN users u ON r.id = u.restaurant_id
-     JOIN whatsapp_credentials wc ON u.id = wc.user_id
-     WHERE wc.phone_number_id = $1`,
+  // First attempt: Look in whatsapp_credentials
+  const waRes = await db.query(
+    `SELECT r.*, wc.webhook_url
+     FROM whatsapp_credentials wc
+     JOIN restaurants r ON wc.restaurant_id = r.id
+     WHERE wc.phone_number_id = $1 AND wc.is_active = true`,
     [phoneNumberId]
   );
 
-  if (res.rows.length > 0) return res.rows[0];
+  if (waRes.rows.length > 0) return waRes.rows[0];
 
-  // 2. Fallback (Optional: remove this if you want strict multi-tenancy)
-  // For now, return default restaurant to keep existing bot working
+  // Second attempt: Legacy/Default (Optional, can be removed for strict mode)
+  // For now, if no match found, check if it's the default/legacy one
+  // (Not implemented here to enforce strictness, or can fallback to ID 1)
   console.log(`⚠️ No tenant found for phone_number_id ${phoneNumberId}, using default.`);
   const defaultRes = await db.query('SELECT * FROM restaurants WHERE id = 1');
   return defaultRes.rows[0] || null;

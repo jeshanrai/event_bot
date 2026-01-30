@@ -5,9 +5,50 @@ import './OwnerDashboard.css';
 const ConnectHub = () => {
     const [activeTab, setActiveTab] = useState('whatsapp');
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
+    // These status states are for immediate feedback (success/error messages)
     const [whatsappStatus, setWhatsappStatus] = useState(null);
     const [facebookStatus, setFacebookStatus] = useState(null);
     const [signupData, setSignupData] = useState(null);
+
+    // Persistent connection data fetched from backend
+    const [connectionData, setConnectionData] = useState({
+        whatsapp: { connected: false, data: null },
+        facebook: { connected: false, data: null }
+    });
+
+    const fetchStatus = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+            // Fetch WhatsApp Status
+            const waRes = await fetch(`${apiUrl}/whatsapp/status`, { headers });
+            const waData = await waRes.json();
+            if (waData.success) {
+                setConnectionData(prev => ({
+                    ...prev,
+                    whatsapp: { connected: waData.connected, data: waData.data }
+                }));
+            }
+
+            // Fetch Facebook Status
+            const fbRes = await fetch(`${apiUrl}/facebook/status`, { headers });
+            const fbData = await fbRes.json();
+            if (fbData.success) {
+                setConnectionData(prev => ({
+                    ...prev,
+                    facebook: { connected: fbData.connected, data: fbData.data }
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching connection status:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchStatus();
+    }, []);
 
     useEffect(() => {
         // Load Facebook SDK
@@ -38,27 +79,47 @@ const ConnectHub = () => {
 
         loadFacebookSDK();
 
-        // Session logging message event listener
+        // Session logging message event listener for WhatsApp Embedded Signup
         const handleMessage = (event) => {
-            if (!event.origin.endsWith('facebook.com')) return;
-            try {
-                console.log('Received message from Facebook:', event.data);
+            // Only process messages from Facebook
+            if (event.origin !== 'https://www.facebook.com' && !event.origin.endsWith('facebook.com')) return;
 
+            try {
                 const data = JSON.parse(event.data);
                 if (data.type === 'WA_EMBEDDED_SIGNUP') {
-                    console.log('WhatsApp signup event found:', data);
+                    // Handle different event types
+                    if (data.event === 'CANCEL') {
+                        setWhatsappStatus({
+                            type: 'error',
+                            message: data.data?.current_step
+                                ? `Setup cancelled at step: ${data.data.current_step}`
+                                : 'Setup cancelled. Please try again.'
+                        });
+                    } else if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
+                        // Successful flow completion - store signup data
+                        if (data.data) {
+                            setSignupData(prev => ({ ...prev, ...data.data, event_type: data.event }));
+                        }
 
-                    if (data.data) {
-                        setSignupData(prev => ({ ...prev, ...data.data }));
+                        // Set success message based on event type
+                        let message = 'WhatsApp connection initiated successfully!';
+                        if (data.event === 'FINISH_ONLY_WABA') {
+                            message = 'WhatsApp Business Account connected (phone number setup pending).';
+                        }
+
+                        setWhatsappStatus({
+                            type: 'success',
+                            message: message
+                        });
+                    } else {
+                        // Unknown event type - log and store data anyway
+                        if (data.data) {
+                            setSignupData(prev => ({ ...prev, ...data.data, event_type: data.event }));
+                        }
                     }
-
-                    setWhatsappStatus({
-                        type: 'success',
-                        message: 'WhatsApp connection initiated successfully!'
-                    });
                 }
             } catch {
-                // Ignore non-JSON messages
+                // Non-JSON message - ignore silently
             }
         };
 
@@ -72,15 +133,12 @@ const ConnectHub = () => {
     // WhatsApp Response callback
     const whatsappLoginCallback = (response) => {
         if (response.authResponse) {
-            const { code, accessToken } = response.authResponse;
-            console.log('WhatsApp Login Response:', response);
-            console.log('Signup Data:', signupData);
+            const accessToken = response.authResponse.accessToken;
 
-            if (!code && !accessToken) {
-                console.error('Neither Authorization code nor Access Token received');
+            if (!accessToken) {
                 setWhatsappStatus({
                     type: 'error',
-                    message: 'Facebook login failed: No credentials received. Please try again.'
+                    message: 'Facebook login failed: No access token received. Please try again.'
                 });
                 return;
             }
@@ -90,7 +148,7 @@ const ConnectHub = () => {
                 message: 'Processing connection...'
             });
 
-            // Send code or token to backend
+            // Send access token to backend (Embedded Signup flow)
             fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/whatsapp/connect`, {
                 method: 'POST',
                 headers: {
@@ -99,7 +157,6 @@ const ConnectHub = () => {
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                    code,
                     access_token: accessToken,
                     waba_id: signupData?.waba_id,
                     phone_number_id: signupData?.phone_number_id || signupData?.phone_id
@@ -107,12 +164,12 @@ const ConnectHub = () => {
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Response data:', data);
                     if (data.success) {
                         setWhatsappStatus({
                             type: 'success',
                             message: `Successfully connected! Phone: ${data.data.phone_number || 'Connected'}`
                         });
+                        fetchStatus(); // Refresh status
                     } else {
                         setWhatsappStatus({
                             type: 'error',
@@ -128,7 +185,6 @@ const ConnectHub = () => {
                     });
                 });
         } else {
-            console.log('Login response:', response);
             setWhatsappStatus({
                 type: 'error',
                 message: response.status === 'unknown'
@@ -142,7 +198,6 @@ const ConnectHub = () => {
     const facebookPageCallback = (response) => {
         if (response.authResponse) {
             const { accessToken } = response.authResponse;
-            console.log('Facebook Page Login Response:', response);
 
             setFacebookStatus({
                 type: 'success',
@@ -151,8 +206,6 @@ const ConnectHub = () => {
 
             // Get user's pages
             window.FB.api('/me/accounts', { access_token: accessToken }, (pagesResponse) => {
-                console.log('Pages Response:', pagesResponse);
-
                 if (pagesResponse.data && pagesResponse.data.length > 0) {
                     // For now, connect the first page (you can add page selection UI later)
                     const page = pagesResponse.data[0];
@@ -178,6 +231,7 @@ const ConnectHub = () => {
                                     type: 'success',
                                     message: `Successfully connected to page: ${page.name}`
                                 });
+                                fetchStatus(); // Refresh status
                             } else {
                                 setFacebookStatus({
                                     type: 'error',
@@ -219,17 +273,12 @@ const ConnectHub = () => {
             return;
         }
 
+        // WhatsApp Embedded Signup
         window.FB.login(whatsappLoginCallback, {
-            config_id: import.meta.env.VITE_WHATSAPP_CONFIG_ID || '<CONFIGURATION_ID>',
-            response_type: 'code',
-            override_default_response_type: true,
-            extras: {
-                setup: {},
-            }
+            config_id: import.meta.env.VITE_WHATSAPP_CONFIG_ID || '<CONFIGURATION_ID>'
         });
     };
 
-    // Launch Facebook Page connection
     const launchFacebookPageConnect = () => {
         if (!window.FB) {
             setFacebookStatus({
@@ -242,6 +291,35 @@ const ConnectHub = () => {
         window.FB.login(facebookPageCallback, {
             scope: 'pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement'
         });
+    };
+
+    const handleDisconnect = async (platform) => {
+        if (!window.confirm(`Are you sure you want to disconnect ${platform}?`)) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+            const res = await fetch(`${apiUrl}/${platform}/disconnect`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                if (platform === 'whatsapp') {
+                    setWhatsappStatus({ type: 'success', message: 'WhatsApp disconnected successfully' });
+                    setConnectionData(prev => ({ ...prev, whatsapp: { connected: false, data: null } }));
+                } else {
+                    setFacebookStatus({ type: 'success', message: 'Facebook Page disconnected successfully' });
+                    setConnectionData(prev => ({ ...prev, facebook: { connected: false, data: null } }));
+                }
+                fetchStatus(); // Refresh status
+            }
+        } catch (error) {
+            console.error('Disconnect error:', error);
+        }
     };
 
     return (
@@ -273,141 +351,165 @@ const ConnectHub = () => {
                 {/* WhatsApp Connect Section */}
                 {activeTab === 'whatsapp' && (
                     <div className="connect-section">
-                        <div className="connect-info-card">
-                            <MessageCircle size={48} className="connect-icon" />
-                            <h3>Connect Your WhatsApp Business Account</h3>
-                            <p>
-                                Link your WhatsApp Business account to enable automated customer interactions,
-                                order notifications, and seamless communication with your customers.
-                            </p>
-
-                            <div className="connect-features">
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Automated order confirmations</span>
+                        {connectionData.whatsapp.connected ? (
+                            <div className="connected-card">
+                                <div className="connected-header">
+                                    <CheckCircle size={24} color="#16a34a" />
+                                    <h4>Connected</h4>
                                 </div>
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Real-time customer support</span>
+                                <div className="connected-details">
+                                    <p><strong>Phone Number:</strong> {connectionData.whatsapp.data?.phone_number || 'N/A'}</p>
+                                    <p><strong>Quality Rating:</strong> {connectionData.whatsapp.data?.quality_rating || 'N/A'}</p>
+                                    {connectionData.whatsapp.data?.connected_at &&
+                                        <p><strong>Connected Since:</strong> {new Date(connectionData.whatsapp.data.connected_at).toLocaleDateString()}</p>
+                                    }
                                 </div>
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Menu browsing via WhatsApp</span>
-                                </div>
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Reservation management</span>
-                                </div>
+                                <button
+                                    onClick={() => handleDisconnect('whatsapp')}
+                                    className="disconnect-btn"
+                                >
+                                    Disconnect WhatsApp
+                                </button>
                             </div>
-
-                            <button
-                                onClick={launchWhatsAppSignup}
-                                disabled={!isSDKLoaded}
-                                className="connect-btn whatsapp-btn"
-                            >
-                                {isSDKLoaded ? 'Connect WhatsApp' : 'Loading...'}
-                            </button>
-
-                            {whatsappStatus && (
-                                <div className={`connection-status ${whatsappStatus.type}`}>
-                                    {whatsappStatus.type === 'success' ? (
-                                        <CheckCircle size={20} />
-                                    ) : (
-                                        <AlertCircle size={20} />
-                                    )}
-                                    <span>{whatsappStatus.message}</span>
-                                </div>
-                            )}
-
-                            <div className="connect-note">
-                                <AlertCircle size={16} />
+                        ) : (
+                            <div className="connect-info-card">
+                                <MessageCircle size={48} className="connect-icon" />
+                                <h3>Connect Your WhatsApp Business Account</h3>
                                 <p>
-                                    You'll need a Facebook Business account and WhatsApp Business API access
-                                    to complete this setup.
+                                    Link your WhatsApp Business account to enable automated customer interactions,
+                                    order notifications, and seamless communication with your customers.
                                 </p>
-                            </div>
-                        </div>
 
-                        <div className="setup-instructions">
-                            <h4>Setup Instructions</h4>
-                            <ol>
-                                <li>Click the "Connect WhatsApp" button above</li>
-                                <li>Log in to your Facebook Business account</li>
-                                <li>Select or create a WhatsApp Business account</li>
-                                <li>Grant necessary permissions</li>
-                                <li>Complete the verification process</li>
-                            </ol>
-                        </div>
+                                <div className="connect-features">
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Automated order confirmations</span>
+                                    </div>
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Real-time customer support</span>
+                                    </div>
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Menu browsing via WhatsApp</span>
+                                    </div>
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Reservation management</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={launchWhatsAppSignup}
+                                    disabled={!isSDKLoaded}
+                                    className="connect-btn whatsapp-btn"
+                                >
+                                    {isSDKLoaded ? 'Connect WhatsApp' : 'Loading...'}
+                                </button>
+
+                                {whatsappStatus && (
+                                    <div className={`connection-status ${whatsappStatus.type}`}>
+                                        {whatsappStatus.type === 'success' ? (
+                                            <CheckCircle size={20} />
+                                        ) : (
+                                            <AlertCircle size={20} />
+                                        )}
+                                        <span>{whatsappStatus.message}</span>
+                                    </div>
+                                )}
+
+                                <div className="connect-note">
+                                    <AlertCircle size={16} />
+                                    <p>
+                                        You'll need a Facebook Business account and WhatsApp Business API access
+                                        to complete this setup.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Facebook Page Connect Section */}
                 {activeTab === 'facebook' && (
                     <div className="connect-section">
-                        <div className="connect-info-card">
-                            <Facebook size={48} className="connect-icon facebook-icon" />
-                            <h3>Connect Your Facebook Page</h3>
-                            <p>
-                                Link your Facebook Page to enable automated responses to messages,
-                                engage with customers, and manage your social media presence directly from your dashboard.
-                            </p>
-
-                            <div className="connect-features">
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Automated message responses</span>
+                        {connectionData.facebook.connected ? (
+                            <div className="connected-card">
+                                <div className="connected-header">
+                                    <CheckCircle size={24} color="#16a34a" />
+                                    <h4>Connected</h4>
                                 </div>
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Customer inquiry management</span>
+                                <div className="connected-details">
+                                    <p><strong>Page Name:</strong> {connectionData.facebook.data?.page_name || 'N/A'}</p>
+                                    {connectionData.facebook.data?.page_id &&
+                                        <p><strong>Page ID:</strong> {connectionData.facebook.data.page_id}</p>
+                                    }
+                                    {connectionData.facebook.data?.connected_at &&
+                                        <p><strong>Connected Since:</strong> {new Date(connectionData.facebook.data.connected_at).toLocaleDateString()}</p>
+                                    }
                                 </div>
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Menu sharing on Facebook</span>
-                                </div>
-                                <div className="feature-item">
-                                    <CheckCircle size={20} />
-                                    <span>Unified messaging dashboard</span>
-                                </div>
+                                <button
+                                    onClick={() => handleDisconnect('facebook')}
+                                    className="disconnect-btn"
+                                >
+                                    Disconnect Page
+                                </button>
                             </div>
-
-                            <button
-                                onClick={launchFacebookPageConnect}
-                                disabled={!isSDKLoaded}
-                                className="connect-btn facebook-btn"
-                            >
-                                {isSDKLoaded ? 'Connect Facebook Page' : 'Loading...'}
-                            </button>
-
-                            {facebookStatus && (
-                                <div className={`connection-status ${facebookStatus.type}`}>
-                                    {facebookStatus.type === 'success' ? (
-                                        <CheckCircle size={20} />
-                                    ) : (
-                                        <AlertCircle size={20} />
-                                    )}
-                                    <span>{facebookStatus.message}</span>
-                                </div>
-                            )}
-
-                            <div className="connect-note">
-                                <AlertCircle size={16} />
+                        ) : (
+                            <div className="connect-info-card">
+                                <Facebook size={48} className="connect-icon facebook-icon" />
+                                <h3>Connect Your Facebook Page</h3>
                                 <p>
-                                    You'll need to be an admin of a Facebook Page to complete this connection.
+                                    Link your Facebook Page to enable automated responses to messages,
+                                    engage with customers, and manage your social media presence directly from your dashboard.
                                 </p>
-                            </div>
-                        </div>
 
-                        <div className="setup-instructions">
-                            <h4>Setup Instructions</h4>
-                            <ol>
-                                <li>Click the "Connect Facebook Page" button above</li>
-                                <li>Log in to your Facebook account</li>
-                                <li>Select the page you want to connect</li>
-                                <li>Grant necessary permissions for messaging</li>
-                                <li>Complete the connection process</li>
-                            </ol>
-                        </div>
+                                <div className="connect-features">
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Automated message responses</span>
+                                    </div>
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Customer inquiry management</span>
+                                    </div>
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Menu sharing on Facebook</span>
+                                    </div>
+                                    <div className="feature-item">
+                                        <CheckCircle size={20} />
+                                        <span>Unified messaging dashboard</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={launchFacebookPageConnect}
+                                    disabled={!isSDKLoaded}
+                                    className="connect-btn facebook-btn"
+                                >
+                                    {isSDKLoaded ? 'Connect Facebook Page' : 'Loading...'}
+                                </button>
+
+                                {facebookStatus && (
+                                    <div className={`connection-status ${facebookStatus.type}`}>
+                                        {facebookStatus.type === 'success' ? (
+                                            <CheckCircle size={20} />
+                                        ) : (
+                                            <AlertCircle size={20} />
+                                        )}
+                                        <span>{facebookStatus.message}</span>
+                                    </div>
+                                )}
+
+                                <div className="connect-note">
+                                    <AlertCircle size={16} />
+                                    <p>
+                                        You'll need to be an admin of a Facebook Page to complete this connection.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

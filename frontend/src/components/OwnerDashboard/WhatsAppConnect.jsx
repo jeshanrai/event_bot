@@ -36,16 +36,20 @@ const WhatsAppConnect = () => {
 
         loadFacebookSDK();
 
-        // Session logging message event listener
+        // Session logging message event listener for WhatsApp Embedded Signup
         const handleMessage = (event) => {
-            if (!event.origin.endsWith('facebook.com')) return;
+            // Only process messages from Facebook
+            if (event.origin !== 'https://www.facebook.com' && !event.origin.endsWith('facebook.com')) return;
+
             try {
                 // Enhanced logging for debugging
-                console.log('Received message from Facebook:', event.data);
+                console.log('[WhatsAppConnect] Received message from Facebook:', event.data);
 
                 const data = JSON.parse(event.data);
                 if (data.type === 'WA_EMBEDDED_SIGNUP') {
-                    console.log('WhatsApp signup event found:', data);
+                    console.log('[WhatsAppConnect] WhatsApp Embedded Signup event:', data);
+                    console.log('[WhatsAppConnect] Event type:', data.event);
+                    console.log('[WhatsAppConnect] Event data:', data.data);
 
                     // Handle different event types
                     if (data.event === 'CANCEL') {
@@ -78,7 +82,7 @@ const WhatsAppConnect = () => {
                     } else if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
                         // Successful flow completion
                         console.log('Flow completed successfully:', data.event);
-                        
+
                         // Store the signup data (waba_id, phone_number_id, etc)
                         if (data.data) {
                             setSignupData(prev => ({ ...prev, ...data.data, event_type: data.event }));
@@ -123,18 +127,17 @@ const WhatsAppConnect = () => {
         console.log('Full Response:', response);
         console.log('Status:', response.status);
         console.log('Auth Response:', response.authResponse);
-        
+
         if (response.authResponse) {
-            const { code, accessToken } = response.authResponse;
-            console.log('Received Code:', code ? 'Yes' : 'No');
+            const accessToken = response.authResponse.accessToken;
             console.log('Received Access Token:', accessToken ? 'Yes' : 'No');
             console.log('Signup Data:', signupData);
 
-            if (!code && !accessToken) {
-                console.error('Neither Authorization code nor Access Token received');
+            if (!accessToken) {
+                console.error('Access Token not received');
                 setConnectionStatus({
                     type: 'error',
-                    message: 'Facebook login failed: No credentials received. Please try again.'
+                    message: 'Facebook login failed: No access token received. Please try again.'
                 });
                 return;
             }
@@ -144,7 +147,7 @@ const WhatsAppConnect = () => {
                 message: 'Processing connection...'
             });
 
-            // Send code or token to backend
+            // Send access token to backend (Embedded Signup flow)
             fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/whatsapp/connect`, {
                 method: 'POST',
                 headers: {
@@ -153,7 +156,6 @@ const WhatsAppConnect = () => {
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                    code,
                     access_token: accessToken,
                     waba_id: signupData?.waba_id,
                     phone_number_id: signupData?.phone_number_id || signupData?.phone_id
@@ -187,7 +189,7 @@ const WhatsAppConnect = () => {
         } else {
             console.warn('No auth response received');
             console.log('Response Status:', response.status);
-            
+
             if (response.status === 'unknown') {
                 setConnectionStatus({
                     type: 'error',
@@ -238,7 +240,7 @@ const WhatsAppConnect = () => {
         const originalConsoleError = console.error;
         console.error = (...args) => {
             const errorString = args.join(' ');
-            if (errorString.includes('impression.php') || 
+            if (errorString.includes('impression.php') ||
                 errorString.includes('ERR_BLOCKED_BY_CLIENT') ||
                 errorString.includes('Failed to fetch')) {
                 // Suppress ad blocker related errors - these don't affect functionality
@@ -253,18 +255,11 @@ const WhatsAppConnect = () => {
         }, 10000);
 
         try {
-            console.log('Launching FB.login with config:', {
-                config_id: import.meta.env.VITE_WHATSAPP_CONFIG_ID,
-                app_id: import.meta.env.VITE_FACEBOOK_APP_ID
-            });
+            console.log('Launching WhatsApp Embedded Signup with config_id:', import.meta.env.VITE_WHATSAPP_CONFIG_ID);
 
+            // WhatsApp Embedded Signup - only pass config_id, no redirect or code flow
             window.FB.login(fbLoginCallback, {
-                config_id: import.meta.env.VITE_WHATSAPP_CONFIG_ID || '<CONFIGURATION_ID>',
-                response_type: 'code',
-                override_default_response_type: true,
-                extras: {
-                    setup: {},
-                }
+                config_id: import.meta.env.VITE_WHATSAPP_CONFIG_ID || '<CONFIGURATION_ID>'
             });
         } catch (error) {
             console.error = originalConsoleError;
@@ -313,7 +308,7 @@ const WhatsAppConnect = () => {
                                 <span>Reservation management</span>
                             </div>
                         </div> If you're using an ad blocker, you may need to
-                                disable it temporarily for this page.
+                        disable it temporarily for this page.
 
                         <button
                             onClick={launchWhatsAppSignup}

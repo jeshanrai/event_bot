@@ -16,7 +16,8 @@ const toolHandlers = {
     try {
       // 1. Check if restaurant has catalog enabled
       const businessId = context.businessId;
-      console.log(`🔍 Checking catalog status for Business ID: ${businessId}`);
+      const restaurantId = context.restaurantId; // Get ID from context
+      console.log(`🔍 Checking catalog status for Business ID: ${businessId}, Restaurant ID: ${restaurantId}`);
 
       let hasCatalog = false;
       if (businessId) {
@@ -48,7 +49,8 @@ const toolHandlers = {
       // CASE B: Standard List Message Mode (Fallback)
       // Get the base URL from environment or use default
       const baseUrl = process.env.APP_BASE_URL || 'https://your-domain.com';
-      const menuUrl = `${baseUrl}/menu.html?userId=${userId}`;
+      // Append restaurant ID for branded menus if needed
+      const menuUrl = `${baseUrl}/menu.html?userId=${userId}&restaurantId=${restaurantId || ''}`;
 
       await sendCtaUrlMessage(
         userId,
@@ -267,7 +269,10 @@ const toolHandlers = {
   show_category_items: async (args, userId, context) => {
     try {
       const category = args.category || 'momos';
-      const foods = await restaurantTools.getMenu(category);
+      const restaurantId = context.restaurantId;
+      if (!restaurantId) console.warn('⚠️ Warning: No restaurantId in context for show_category_items');
+
+      const foods = await restaurantTools.getMenu(category, restaurantId);
 
       if (foods.length === 0) {
         await sendMessage(userId, context.platform, `No items found in ${category}. Try another category!`);
@@ -443,8 +448,9 @@ const toolHandlers = {
         return { reply: null, updatedContext: context };
       }
 
-      // Search for the item in database
-      const matchingItems = await restaurantTools.getFoodByName(itemName);
+      // Search for the item in database (scoped to restaurant)
+      const restaurantId = context.restaurantId;
+      const matchingItems = await restaurantTools.getFoodByName(itemName, restaurantId);
 
       // If no direct match, try checking recommendations again as a fallback
       if (matchingItems.length === 0 && context.recommendations && context.recommendations.length > 0) {
@@ -583,8 +589,8 @@ const toolHandlers = {
 
         if (!itemName) continue;
 
-        // Search for the item in database
-        const matchingItems = await restaurantTools.getFoodByName(itemName);
+        // Search for the item in database (scoped to restaurant)
+        const matchingItems = await restaurantTools.getFoodByName(itemName, context.restaurantId);
 
         if (matchingItems.length === 0) {
           notFoundItems.push(itemName);
@@ -762,7 +768,7 @@ const toolHandlers = {
         }
       } else {
         // Item from LLM - validate by name
-        const matches = await restaurantTools.getFoodByName(item.name);
+        const matches = await restaurantTools.getFoodByName(item.name, context.restaurantId);
         if (matches.length > 0) {
           // Use the first exact or closest match
           const dbItem = matches[0];
@@ -1055,7 +1061,8 @@ const toolHandlers = {
         const finalOrder = await restaurantTools.finalizeOrderFromCart(userId, cart, {
           service_type: 'dine_in',
           payment_method: null, // Not selected yet
-          platform: context.platform
+          platform: context.platform,
+          restaurantId: context.restaurantId // Pass restaurant ID
         });
 
         // Store order details in context
@@ -1218,9 +1225,10 @@ const toolHandlers = {
     try {
       const safeArgs = args || {};
       const tag = safeArgs.tag || 'random';
-      console.log(`Getting recommendations for tag: ${tag}`);
+      const restaurantId = context.restaurantId;
+      console.log(`Getting recommendations for tag: ${tag} (Restaurant: ${restaurantId})`);
 
-      const foods = await restaurantTools.getRecommendedFoods(tag);
+      const foods = await restaurantTools.getRecommendedFoods(tag, restaurantId);
 
       if (foods.length === 0) {
         await sendMessage(userId, context.platform,
