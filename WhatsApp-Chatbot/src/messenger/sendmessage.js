@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import TenantResolver from '../utils/tenant.js';
 
 // Messenger-specific environment variables
 const getConfig = () => ({
@@ -17,10 +18,15 @@ function logFinalResponse(to, type, content) {
 /**
  * Send a text message via Facebook Messenger Send API
  */
-export async function sendMessengerMessage(recipientPsid, messageText) {
+export async function sendMessengerMessage(recipientPsid, messageText, options = {}) {
   logFinalResponse(recipientPsid, 'Text', messageText);
 
-  const { pageAccessToken, apiVersion } = getConfig();
+  let { pageAccessToken, apiVersion } = getConfig();
+
+  if (options.pageId) {
+    const token = await TenantResolver.getMessengerToken(options.pageId);
+    if (token) pageAccessToken = token;
+  }
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -67,10 +73,15 @@ export async function sendMessengerMessage(recipientPsid, messageText) {
 /**
  * Send a message with quick reply buttons
  */
-export async function sendMessengerQuickReplies(recipientPsid, text, quickReplies) {
+export async function sendMessengerQuickReplies(recipientPsid, text, quickReplies, options = {}) {
   logFinalResponse(recipientPsid, 'Quick Replies', `${text}\n[Options: ${quickReplies.map(q => q.title).join(', ')}]`);
 
-  const { pageAccessToken, apiVersion } = getConfig();
+  let { pageAccessToken, apiVersion } = getConfig();
+
+  if (options.pageId) {
+    const token = await TenantResolver.getMessengerToken(options.pageId);
+    if (token) pageAccessToken = token;
+  }
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -119,10 +130,15 @@ export async function sendMessengerQuickReplies(recipientPsid, text, quickReplie
 /**
  * Send a generic template (carousel of cards)
  */
-export async function sendMessengerGenericTemplate(recipientPsid, elements) {
+export async function sendMessengerGenericTemplate(recipientPsid, elements, options = {}) {
   logFinalResponse(recipientPsid, 'Generic Template', `[${elements.length} cards]`);
 
-  const { pageAccessToken, apiVersion } = getConfig();
+  let { pageAccessToken, apiVersion } = getConfig();
+
+  if (options.pageId) {
+    const token = await TenantResolver.getMessengerToken(options.pageId);
+    if (token) pageAccessToken = token;
+  }
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -181,10 +197,15 @@ export async function sendMessengerGenericTemplate(recipientPsid, elements) {
 /**
  * Send a button template (text with up to 3 buttons)
  */
-export async function sendMessengerButtonTemplate(recipientPsid, text, buttons) {
+export async function sendMessengerButtonTemplate(recipientPsid, text, buttons, options = {}) {
   logFinalResponse(recipientPsid, 'Button Template', `${text}\n[Buttons: ${buttons.map(b => b.title).join(', ')}]`);
 
-  const { pageAccessToken, apiVersion } = getConfig();
+  let { pageAccessToken, apiVersion } = getConfig();
+
+  if (options.pageId) {
+    const token = await TenantResolver.getMessengerToken(options.pageId);
+    if (token) pageAccessToken = token;
+  }
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -251,10 +272,15 @@ export async function sendMessengerButtonTemplate(recipientPsid, text, buttons) 
 /**
  * Send an image message
  */
-export async function sendMessengerImage(recipientPsid, imageUrl, isReusable = true) {
+export async function sendMessengerImage(recipientPsid, imageUrl, isReusable = true, options = {}) {
   logFinalResponse(recipientPsid, 'Image', `[Image: ${imageUrl}]`);
 
-  const { pageAccessToken, apiVersion } = getConfig();
+  let { pageAccessToken, apiVersion } = getConfig();
+
+  if (options.pageId) {
+    const token = await TenantResolver.getMessengerToken(options.pageId);
+    if (token) pageAccessToken = token;
+  }
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -304,8 +330,13 @@ export async function sendMessengerImage(recipientPsid, imageUrl, isReusable = t
 /**
  * Send sender action (typing indicator, mark seen)
  */
-export async function sendMessengerSenderAction(recipientPsid, action) {
-  const { pageAccessToken, apiVersion } = getConfig();
+export async function sendMessengerSenderAction(recipientPsid, action, options = {}) {
+  let { pageAccessToken, apiVersion } = getConfig();
+
+  if (options.pageId) {
+    const token = await TenantResolver.getMessengerToken(options.pageId);
+    if (token) pageAccessToken = token;
+  }
 
   if (!pageAccessToken) return null;
 

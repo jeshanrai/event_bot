@@ -79,7 +79,8 @@ async function handleIncomingMessage(message) {
 
   // Only send reply if there's one (interactive messages handle their own replies)
   if (decision.reply) {
-    await sendReply(message.platform, userId, decision.reply);
+    const replyOptions = { businessId: decision.updatedContext?.businessId || context.businessId };
+    await sendReply(message.platform, userId, decision.reply, replyOptions);
   }
 }
 

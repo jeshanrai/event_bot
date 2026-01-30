@@ -17,9 +17,10 @@ import {
 /**
  * Send a basic text message
  */
-export async function sendMessage(userId, platform, text) {
+export async function sendMessage(userId, platform, text, options = {}) {
     if (platform === 'messenger') {
-        return await sendMessengerMessage(userId, text);
+        const sendOptions = { pageId: options.businessId, ...options };
+        return await sendMessengerMessage(userId, text, sendOptions);
     }
     // Default to WhatsApp
     return await sendWhatsAppMessage(userId, text);
@@ -30,7 +31,7 @@ export async function sendMessage(userId, platform, text) {
  * WhatsApp: Uses List Message
  * Messenger: Uses Generic Template (Carousel) as list replacement
  */
-export async function sendListMessage(userId, platform, title, body, buttonText, sectionTitle, sections) {
+export async function sendListMessage(userId, platform, title, body, buttonText, sectionTitle, sections, options = {}) {
     if (platform === 'messenger') {
         // Convert List format to Messenger Generic Template
         // Flatten all rows from all sections
@@ -60,7 +61,8 @@ export async function sendListMessage(userId, platform, title, body, buttonText,
             });
         });
 
-        return await sendMessengerGenericTemplate(userId, elements);
+        const sendOptions = { pageId: options.businessId, ...options };
+        return await sendMessengerGenericTemplate(userId, elements, sendOptions);
     }
 
     // WhatsApp
@@ -72,7 +74,7 @@ export async function sendListMessage(userId, platform, title, body, buttonText,
  * WhatsApp: Uses Button Message (max 3 buttons)
  * Messenger: Uses Button Template (max 3 buttons)
  */
-export async function sendButtonMessage(userId, platform, title, body, footer, buttons) {
+export async function sendButtonMessage(userId, platform, title, body, footer, buttons, options = {}) {
     if (platform === 'messenger') {
         // Convert to Messenger Button Template
         const messengerButtons = buttons.map(btn => {
@@ -97,7 +99,8 @@ export async function sendButtonMessage(userId, platform, title, body, footer, b
             };
         });
 
-        return await sendMessengerButtonTemplate(userId, `${title}\n\n${body}`, messengerButtons);
+        const sendOptions = { pageId: options.businessId, ...options };
+        return await sendMessengerButtonTemplate(userId, `${title}\n\n${body}`, messengerButtons, sendOptions);
     }
 
     // WhatsApp
@@ -109,7 +112,7 @@ export async function sendButtonMessage(userId, platform, title, body, footer, b
  * WhatsApp: Uses Carousel Message (if available/implemented) or fallback
  * Messenger: Uses Generic Template
  */
-export async function sendCarouselMessage(userId, platform, cards) {
+export async function sendCarouselMessage(userId, platform, cards, options = {}) {
     if (platform === 'messenger') {
         // Map to Messenger elements
         const elements = cards.map(card => ({
@@ -123,7 +126,8 @@ export async function sendCarouselMessage(userId, platform, cards) {
             }))
         }));
 
-        return await sendMessengerGenericTemplate(userId, elements);
+        const sendOptions = { pageId: options.businessId, ...options };
+        return await sendMessengerGenericTemplate(userId, elements, sendOptions);
     }
 
     // WhatsApp
@@ -133,7 +137,7 @@ export async function sendCarouselMessage(userId, platform, cards) {
 /**
  * Send order confirmation message with Confirm and Cancel buttons
  */
-export async function sendOrderConfirmationMessage(userId, platform, orderDetails) {
+export async function sendOrderConfirmationMessage(userId, platform, orderDetails, options = {}) {
     const buttons = [
         {
             type: 'reply',
@@ -159,7 +163,8 @@ export async function sendOrderConfirmationMessage(userId, platform, orderDetail
         '🛒 Confirm Your Order',
         bodyText,
         'Thank you for ordering with Momo House!',
-        buttons
+        buttons,
+        options
     );
 }
 
@@ -168,11 +173,12 @@ export async function sendOrderConfirmationMessage(userId, platform, orderDetail
  * WhatsApp: Uses native location_request_message with Send Location button
  * Messenger: Falls back to text message (no native location request support)
  */
-export async function sendLocationRequest(userId, platform, bodyText) {
+export async function sendLocationRequest(userId, platform, bodyText, options = {}) {
     if (platform === 'messenger') {
         // Messenger doesn't have native location request
         // Fall back to text message asking for address
-        return await sendMessengerMessage(userId, bodyText);
+        const sendOptions = { pageId: options.businessId, ...options };
+        return await sendMessengerMessage(userId, bodyText, sendOptions);
     }
     // WhatsApp - use native location request
     return await sendWhatsAppLocationRequest(userId, bodyText);
@@ -183,7 +189,7 @@ export async function sendLocationRequest(userId, platform, bodyText) {
  * WhatsApp: Uses CTA URL interactive message
  * Messenger: Uses Button Template with web_url type
  */
-export async function sendCtaUrlMessage(userId, platform, headerText, bodyText, footerText, buttonText, url) {
+export async function sendCtaUrlMessage(userId, platform, headerText, bodyText, footerText, buttonText, url, options = {}) {
     if (platform === 'messenger') {
         // Messenger uses Button Template with web_url
         const buttons = [
@@ -202,7 +208,8 @@ export async function sendCtaUrlMessage(userId, platform, headerText, bodyText, 
         console.log(`   - URL: ${url}`);
         console.log(`   - Buttons: ${JSON.stringify(buttons, null, 2)}`);
 
-        return await sendMessengerButtonTemplate(userId, `${headerText}\n\n${bodyText}`, buttons);
+        const sendOptions = { pageId: options.businessId, ...options };
+        return await sendMessengerButtonTemplate(userId, `${headerText}\n\n${bodyText}`, buttons, sendOptions);
     }
     // WhatsApp - use CTA URL button
     return await sendWhatsAppCtaUrlButton(userId, headerText, bodyText, footerText, buttonText, url);

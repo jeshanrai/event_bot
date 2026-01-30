@@ -63,6 +63,25 @@ const TenantResolver = {
             console.error('❌ TenantResolver Messenger Error:', error);
             return null;
         }
+    },
+
+    /**
+     * Get Page Access Token for a specific Page ID
+     * @param {string} pageId 
+     * @returns {Promise<string|null>}
+     */
+    getMessengerToken: async (pageId) => {
+        if (!pageId) return null;
+        try {
+            const res = await db.query(
+                'SELECT page_access_token FROM facebook_credentials WHERE page_id = $1 AND is_active = true',
+                [pageId]
+            );
+            return res.rows[0]?.page_access_token || null;
+        } catch (error) {
+            console.error('❌ Error fetching Messenger token:', error);
+            return null;
+        }
     }
 };
 
