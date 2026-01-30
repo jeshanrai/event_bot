@@ -39,6 +39,28 @@ async function handleIncomingMessage(message) {
   // Check for interactive reply (button click or list selection)
   const interactiveReply = parseInteractiveReply(message);
 
+  // --- AGE VERIFICATION CHECK ---
+  // If age not verified, and user is NOT currently responding to age prompt
+  const isAgeResponse = interactiveReply && (interactiveReply.id === 'age_verified_yes' || interactiveReply.id === 'age_verified_no');
+
+  if (!context.age_verified && !isAgeResponse && !context.isAdmin) {
+    console.log(`🔒 User ${userId} not age verified. Sending prompt.`);
+
+    await sendButtonMessage(
+      userId,
+      context.platform,
+      '🔞 Age Verification Required',
+      'This service includes age-restricted content and products (alcohol).\n\n*Are you 18 years old or above?*',
+      'Please confirm your age',
+      [
+        { type: 'reply', reply: { id: 'age_verified_yes', title: '✅ I am 18+' } },
+        { type: 'reply', reply: { id: 'age_verified_no', title: '❌ I am under 18' } }
+      ]
+    );
+
+    return; // STOP PROCESSING
+  }
+
   // Add USER message to history
   const history = context.history || [];
   let userContent = message.text;
@@ -51,10 +73,16 @@ async function handleIncomingMessage(message) {
     userContent = '[Media/Other]';
   }
 
-  history.push({ role: 'user', content: userContent });
+  // Deduplicate: If the last message in history is identical to this one (and very recent), skip adding it
+  // This helps prevent "echo" loops if webhooks fire multiple times
+  const lastMsg = history.length > 0 ? history[history.length - 1] : null;
+  const isDuplicate = lastMsg && lastMsg.role === 'user' && lastMsg.content === userContent;
 
-  // Keep last 10 messages
-  if (history.length > 10) history.shift();
+  if (!isDuplicate) {
+    history.push({ role: 'user', content: userContent });
+    // Keep last 10 messages
+    if (history.length > 10) history.shift();
+  }
 
   const decision = await routeIntent({
     text: message.text,

@@ -14,11 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initializeApp() {
-    // Get userId from URL parameters and store in state
+    // Get userId and restaurantId from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     state.userId = urlParams.get('userId') || urlParams.get('user_id') || urlParams.get('psid');
+    state.restaurantId = urlParams.get('restaurantId') || urlParams.get('restaurant_id');
 
     console.log('User ID:', state.userId);
+    console.log('Restaurant ID:', state.restaurantId);
 
     await loadMenuData();
     await loadUserCart(); // Load user's session cart
@@ -56,7 +58,8 @@ async function loadUserCart() {
 async function loadMenuData() {
     try {
         // Fetch ALL items at once
-        const res = await fetch('/api/menu?all=true');
+        const restaurantIdParam = state.restaurantId ? `&restaurantId=${state.restaurantId}` : '';
+        const res = await fetch(`/api/menu?all=true${restaurantIdParam}`);
         const data = await res.json();
 
         if (data.success && Array.isArray(data.items)) {

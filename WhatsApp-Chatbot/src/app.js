@@ -114,17 +114,35 @@ app.use(express.json({
 // API: Get menu items or categories
 app.get('/api/menu', async (req, res) => {
   try {
-    const { category, all } = req.query;
+    const { category, all, restaurantId } = req.query;
+    const targetRestaurantId = parseInt(restaurantId) || 1; // Default to 1 if missing
 
-    let items;
+    let items = [];
+
     if (all === 'true') {
       // Fetch ALL items for client-side filtering
-      items = await restaurantTools.getFoodByName('');
+      items = await restaurantTools.getFoodByName('', targetRestaurantId);
+
+      // Fallback: If no items found for target restaurant, try default restaurant (ID 1)
+      if (items.length === 0 && targetRestaurantId !== 1) {
+        console.log(`⚠️ No items found for Restaurant ${targetRestaurantId}, falling back to Default (1)`);
+        items = await restaurantTools.getFoodByName('', 1);
+      }
     } else if (category) {
-      items = await restaurantTools.getMenu(category);
+      items = await restaurantTools.getMenu(category, targetRestaurantId);
+
+      // Fallback
+      if (items.length === 0 && targetRestaurantId !== 1) {
+        items = await restaurantTools.getMenu(category, 1);
+      }
     } else {
       // Return categories
-      items = await restaurantTools.getMenu(null);
+      items = await restaurantTools.getMenu(null, targetRestaurantId);
+
+      // Fallback
+      if (items.length === 0 && targetRestaurantId !== 1) {
+        items = await restaurantTools.getMenu(null, 1);
+      }
     }
 
     res.json({ success: true, items });

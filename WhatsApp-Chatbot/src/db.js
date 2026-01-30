@@ -10,8 +10,8 @@ const { Pool } = pg;
 const pool = process.env.DATABASE_URL
   ? new Pool({
     connectionString: process.env.DATABASE_URL,
-    // Cloud databases (Render, Neon) usually require SSL
-    ssl: { rejectUnauthorized: false }
+    // Only use SSL if explicitly requested or ensuring safety (local often fails with simple SSL)
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
   })
   : new Pool({
     host: process.env.DB_HOST || 'localhost',

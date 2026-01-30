@@ -56,8 +56,8 @@ const toolHandlers = {
         userId,
         context.platform,
         '🍽️ Restaurant Menu',
-        'Welcome! Tap the button below to browse our delicious menu and add items to your cart.',
-        'Momo House - Best food in town!',
+        'Tap the button below to browse our delicious menu and add items to your cart.',
+        'Momo House',
         'View Menu 📋',
         menuUrl
       );
@@ -998,24 +998,21 @@ const toolHandlers = {
   },
 
   // New Handler: Welcome Message
+  // New Handler: Welcome Message
   show_welcome_message: async (args, userId, context) => {
-    const buttons = [
-      {
-        type: 'reply',
-        reply: {
-          id: 'view_all_categories',
-          title: 'View Menu 🍽️'
-        }
-      }
-    ];
+    // Get the base URL from environment or use default
+    const baseUrl = process.env.APP_BASE_URL || 'https://your-domain.com';
+    const restaurantId = context.restaurantId;
+    const menuUrl = `${baseUrl}/menu.html?userId=${userId}&restaurantId=${restaurantId || ''}`;
 
-    await sendButtonMessage(
+    await sendCtaUrlMessage(
       userId,
       context.platform,
       '👋 Welcome to Momo House!',
-      'We serve the best foods in town. Browse our menu to order now!',
-      'Tap to start',
-      buttons
+      'We serve the best foods in town. \n\nTap the button below to browse our full menu and place your order directly!',
+      'Delicious & Fast 🥟',
+      'View Menu 📋',
+      menuUrl
     );
 
     return {
@@ -1346,6 +1343,27 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
   if (interactiveReply) {
     const { id, title } = interactiveReply;
     console.log(`🔘 Interactive reply: ${id} - ${title}`);
+
+    // --- Age Verification Handlers ---
+    if (id === 'age_verified_yes') {
+      await sendMessage(userId, context.platform, "Thank you for confirming. You may now continue using the service. 🥂");
+
+      // Auto-show menu after verification for better UX
+      return await toolHandlers.show_food_menu({}, userId, context);
+    }
+
+    if (id === 'age_verified_no') {
+      await sendMessage(userId, context.platform, "Sorry — this service is only available to users aged 18 or older.\n\nYou won’t be able to continue further. If this was selected by mistake, please restart the chat.");
+
+      return {
+        reply: null,
+        updatedContext: {
+          ...context,
+          age_verified: false,
+          lastAction: 'age_denied'
+        }
+      };
+    }
 
     // Category selection from menu
     if (id.startsWith('cat_')) {
