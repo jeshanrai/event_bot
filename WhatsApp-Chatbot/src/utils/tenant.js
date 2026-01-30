@@ -82,6 +82,25 @@ const TenantResolver = {
             console.error('❌ Error fetching Messenger token:', error);
             return null;
         }
+    },
+
+    /**
+     * Get WhatsApp Access Token for a specific Phone Number ID
+     * @param {string} phoneNumberId 
+     * @returns {Promise<string|null>}
+     */
+    getWhatsAppToken: async (phoneNumberId) => {
+        if (!phoneNumberId) return null;
+        try {
+            const res = await db.query(
+                'SELECT access_token FROM whatsapp_credentials WHERE phone_number_id = $1 AND is_active = true',
+                [phoneNumberId]
+            );
+            return res.rows[0]?.access_token || null;
+        } catch (error) {
+            console.error('❌ Error fetching WhatsApp token:', error);
+            return null;
+        }
     }
 };
 

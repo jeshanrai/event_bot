@@ -23,7 +23,7 @@ export async function sendMessage(userId, platform, text, options = {}) {
         return await sendMessengerMessage(userId, text, sendOptions);
     }
     // Default to WhatsApp
-    return await sendWhatsAppMessage(userId, text);
+    return await sendWhatsAppMessage(userId, text, options);
 }
 
 /**
@@ -66,7 +66,7 @@ export async function sendListMessage(userId, platform, title, body, buttonText,
     }
 
     // WhatsApp
-    return await sendWhatsAppListMessage(userId, title, body, buttonText, sectionTitle, sections);
+    return await sendWhatsAppListMessage(userId, title, body, buttonText, sectionTitle, sections, options);
 }
 
 /**
@@ -104,7 +104,7 @@ export async function sendButtonMessage(userId, platform, title, body, footer, b
     }
 
     // WhatsApp
-    return await sendWhatsAppButtonMessage(userId, title, body, footer, buttons);
+    return await sendWhatsAppButtonMessage(userId, title, body, footer, buttons, options);
 }
 
 /**
@@ -131,7 +131,7 @@ export async function sendCarouselMessage(userId, platform, cards, options = {})
     }
 
     // WhatsApp
-    return await sendWhatsAppCarouselMessage(userId, cards);
+    return await sendWhatsAppCarouselMessage(userId, cards, options);
 }
 
 /**
@@ -181,7 +181,7 @@ export async function sendLocationRequest(userId, platform, bodyText, options = 
         return await sendMessengerMessage(userId, bodyText, sendOptions);
     }
     // WhatsApp - use native location request
-    return await sendWhatsAppLocationRequest(userId, bodyText);
+    return await sendWhatsAppLocationRequest(userId, bodyText, options);
 }
 
 /**
@@ -212,6 +212,6 @@ export async function sendCtaUrlMessage(userId, platform, headerText, bodyText, 
         return await sendMessengerButtonTemplate(userId, `${headerText}\n\n${bodyText}`, buttons, sendOptions);
     }
     // WhatsApp - use CTA URL button
-    return await sendWhatsAppCtaUrlButton(userId, headerText, bodyText, footerText, buttonText, url);
+    return await sendWhatsAppCtaUrlButton(userId, headerText, bodyText, footerText, buttonText, url, options);
 }
 

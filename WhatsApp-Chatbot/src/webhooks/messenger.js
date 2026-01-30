@@ -94,7 +94,7 @@ export default async function messengerWebhook(req, res) {
 
       try {
         // Send typing indicator
-        await sendMessengerSenderAction(senderPsid, 'typing_on');
+        await sendMessengerSenderAction(senderPsid, 'typing_on', { pageId });
 
         const contextData = {
           restaurantId,
@@ -118,7 +118,7 @@ export default async function messengerWebhook(req, res) {
         console.error(`❌ Error processing Messenger event:`, error);
         // Send friendly error message
         try {
-          await sendMessengerMessage(senderPsid, "Currently chat unavailable, please call for details.");
+          await sendMessengerMessage(senderPsid, "Currently chat unavailable, please call for details.", { pageId });
         } catch (sendErr) {
           console.error('Failed to send error notification:', sendErr);
         }

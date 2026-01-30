@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import TenantResolver from '../utils/tenant.js';
 import { momoImages } from '../assets/momoImages.js';
 
 function logFinalResponse(to, type, content) {
@@ -9,11 +10,19 @@ function logFinalResponse(to, type, content) {
   console.log('━'.repeat(50));
 }
 
-export async function sendWhatsAppImageMessage(to, imageUrl, caption) {
+export async function sendWhatsAppImageMessage(to, imageUrl, caption, options = {}) {
   logFinalResponse(to, 'Image', caption ? `[Image] ${caption}` : '[Image]');
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  let phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (options.businessId) {
+    const token = await TenantResolver.getWhatsAppToken(options.businessId);
+    if (token) {
+      accessToken = token;
+      phoneNumberId = options.businessId;
+    }
+  }
 
   if (!phoneNumberId || !accessToken) {
     console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
@@ -60,11 +69,19 @@ export async function sendWhatsAppImageMessage(to, imageUrl, caption) {
 }
 
 // Send interactive button message
-export async function sendWhatsAppButtonMessage(to, headerText, bodyText, footerText, buttons) {
+export async function sendWhatsAppButtonMessage(to, headerText, bodyText, footerText, buttons, options = {}) {
   logFinalResponse(to, 'Button Message', `${headerText ? `[Header: ${headerText}]\n` : ''}${bodyText}\n[Buttons: ${buttons.map(b => b.reply.title).join(', ')}]`);
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  let phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (options.businessId) {
+    const token = await TenantResolver.getWhatsAppToken(options.businessId);
+    if (token) {
+      accessToken = token;
+      phoneNumberId = options.businessId;
+    }
+  }
 
   if (!phoneNumberId || !accessToken) {
     console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
@@ -123,7 +140,7 @@ export async function sendWhatsAppButtonMessage(to, headerText, bodyText, footer
 }
 
 // Send order confirmation message with Confirm and Cancel buttons
-export async function sendOrderConfirmationMessage(to, orderDetails) {
+export async function sendOrderConfirmationMessage(to, orderDetails, options = {}) {
   const buttons = [
     {
       type: 'reply',
@@ -148,15 +165,24 @@ export async function sendOrderConfirmationMessage(to, orderDetails) {
     '🛒 Confirm Your Order',
     bodyText,
     'Thank you for ordering with Momo House!',
-    buttons
+    buttons,
+    options
   );
 }
 
-export async function sendWhatsAppCarouselMessage(to, bodyText, cards) {
+export async function sendWhatsAppCarouselMessage(to, bodyText, cards, options = {}) {
   logFinalResponse(to, 'Carousel Message', bodyText);
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  let phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (options.businessId) {
+    const token = await TenantResolver.getWhatsAppToken(options.businessId);
+    if (token) {
+      accessToken = token;
+      phoneNumberId = options.businessId;
+    }
+  }
 
   if (!phoneNumberId || !accessToken) {
     console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
@@ -207,11 +233,19 @@ export async function sendWhatsAppCarouselMessage(to, bodyText, cards) {
   }
 }
 
-export async function sendWhatsAppListMessage(to, header, body, footer, buttonText, sections) {
+export async function sendWhatsAppListMessage(to, header, body, footer, buttonText, sections, options = {}) {
   logFinalResponse(to, 'List Message', `${header ? `[Header: ${header}]\n` : ''}${body}\n[Button: ${buttonText}]`);
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  let phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (options.businessId) {
+    const token = await TenantResolver.getWhatsAppToken(options.businessId);
+    if (token) {
+      accessToken = token;
+      phoneNumberId = options.businessId;
+    }
+  }
 
   if (!phoneNumberId || !accessToken) {
     console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
@@ -281,11 +315,19 @@ export async function sendWhatsAppListMessage(to, header, body, footer, buttonTe
   }
 }
 
-export async function sendWhatsAppMessage(to, text) {
+export async function sendWhatsAppMessage(to, text, options = {}) {
   logFinalResponse(to, 'Text Message', text);
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  let phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (options.businessId) {
+    const token = await TenantResolver.getWhatsAppToken(options.businessId);
+    if (token) {
+      accessToken = token;
+      phoneNumberId = options.businessId;
+    }
+  }
 
   if (!phoneNumberId || !accessToken) {
     console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
@@ -335,15 +377,23 @@ export async function sendWhatsAppMessage(to, text) {
  * Send a CTA URL button message (opens webpage/webview)
  * Used for sending menu webview links
  */
-export async function sendWhatsAppCtaUrlButton(to, headerText, bodyText, footerText, buttonText, url) {
+export async function sendWhatsAppCtaUrlButton(to, headerText, bodyText, footerText, buttonText, url, options = {}) {
   console.log('\n✅ [FINAL RESPONSE MESSAGE]');
   console.log(`🎯 User ID: ${to}`);
   console.log(`📝 Type: CTA URL Button`);
   console.log(`📤 URL: ${url}`);
   console.log('━'.repeat(50));
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  let phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (options.businessId) {
+    const token = await TenantResolver.getWhatsAppToken(options.businessId);
+    if (token) {
+      accessToken = token;
+      phoneNumberId = options.businessId;
+    }
+  }
 
   if (!phoneNumberId || !accessToken) {
     console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
@@ -405,15 +455,23 @@ export async function sendWhatsAppCtaUrlButton(to, headerText, bodyText, footerT
   }
 }
 
-export async function sendWhatsAppLocationRequest(to, bodyText) {
+export async function sendWhatsAppLocationRequest(to, bodyText, options = {}) {
   console.log('\n✅ [FINAL RESPONSE MESSAGE]');
   console.log(`🎯 User ID: ${to}`);
   console.log(`📝 Type: Location Request`);
   console.log(`📤 Content: ${bodyText}`);
   console.log('━'.repeat(50));
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  let phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  let accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (options.businessId) {
+    const token = await TenantResolver.getWhatsAppToken(options.businessId);
+    if (token) {
+      accessToken = token;
+      phoneNumberId = options.businessId;
+    }
+  }
 
   if (!phoneNumberId || !accessToken) {
     console.error('Missing WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN)');
