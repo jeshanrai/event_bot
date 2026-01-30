@@ -33,7 +33,8 @@ const toolHandlers = {
         await sendMessage(
           userId,
           context.platform,
-          "🍽️ *View Our Menu*\n\nPlease tap the *Shop/Catalog* button (Store Icon 🏪) at the top of this chat or in the attachment menu to browse our items with images!\n\nSelect items and click *'Send to Business'* to order."
+          "🍽️ *View Our Menu*\n\nPlease tap the *Shop/Catalog* button (Store Icon 🏪) at the top of this chat or in the attachment menu to browse our items with images!\n\nSelect items and click *'Send to Business'* to order.",
+          { businessId: context.businessId }
         );
 
         return {
@@ -59,7 +60,8 @@ const toolHandlers = {
         'Tap the button below to browse our delicious menu and add items to your cart.',
         'Momo House',
         'View Menu 📋',
-        menuUrl
+        menuUrl,
+        { businessId: context.businessId }
       );
 
       return {
@@ -72,7 +74,7 @@ const toolHandlers = {
       };
     } catch (error) {
       console.error('Error sending menu webview:', error);
-      await sendMessage(userId, context.platform, "Sorry, I couldn't load the menu. Please try again.");
+      await sendMessage(userId, context.platform, "Sorry, I couldn't load the menu. Please try again.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -117,7 +119,7 @@ const toolHandlers = {
       }
 
       if (addedItems.length === 0) {
-        await sendMessage(userId, context.platform, "❌ Sorry, the items you selected are currently unavailable in our system.");
+        await sendMessage(userId, context.platform, "❌ Sorry, the items you selected are currently unavailable in our system.", { businessId: context.businessId });
         return { reply: null, updatedContext: context };
       }
 
@@ -151,7 +153,8 @@ const toolHandlers = {
         '✅ Added to Cart',
         `Received from catalog:\n${addedNames}\n\n🛒 Cart Total: ${itemCount} item(s) - AUD ${total}\n\nWhat would you like to do?`,
         'Checkout or continue shopping',
-        buttons
+        buttons,
+        { businessId: context.businessId }
       );
 
       return {
@@ -166,7 +169,7 @@ const toolHandlers = {
 
     } catch (error) {
       console.error('Error processing catalog order:', error);
-      await sendMessage(userId, context.platform, "Sorry, there was an error processing your catalog selection.");
+      await sendMessage(userId, context.platform, "Sorry, there was an error processing your catalog selection.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -211,7 +214,7 @@ const toolHandlers = {
       }
 
       if (addedItems.length === 0) {
-        await sendMessage(userId, context.platform, "❌ Sorry, the items you selected are currently unavailable in our system.");
+        await sendMessage(userId, context.platform, "❌ Sorry, the items you selected are currently unavailable in our system.", { businessId: context.businessId });
         return { reply: null, updatedContext: context };
       }
 
@@ -245,7 +248,8 @@ const toolHandlers = {
         '✅ Added to Cart',
         `Received from catalog:\n${addedNames}\n\n🛒 Cart Total: ${itemCount} item(s) - AUD ${total}\n\nWhat would you like to do?`,
         'Checkout or continue shopping',
-        buttons
+        buttons,
+        { businessId: context.businessId }
       );
 
       return {
@@ -260,7 +264,7 @@ const toolHandlers = {
 
     } catch (error) {
       console.error('Error processing catalog order:', error);
-      await sendMessage(userId, context.platform, "Sorry, there was an error processing your catalog selection.");
+      await sendMessage(userId, context.platform, "Sorry, there was an error processing your catalog selection.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -275,7 +279,7 @@ const toolHandlers = {
       const foods = await restaurantTools.getMenu(category, restaurantId);
 
       if (foods.length === 0) {
-        await sendMessage(userId, context.platform, `No items found in ${category}. Try another category!`);
+        await sendMessage(userId, context.platform, `No items found in ${category}. Try another category!`, { businessId: context.businessId });
         return await toolHandlers.show_food_menu({}, userId, context);
       }
 
@@ -319,7 +323,8 @@ const toolHandlers = {
         bodyText,
         'Tap to add items to cart',
         'Select Item',
-        sections
+        sections,
+        { businessId: context.businessId }
       );
 
       return {
@@ -334,7 +339,7 @@ const toolHandlers = {
       };
     } catch (error) {
       console.error('Error fetching category items:', error);
-      await sendMessage(userId, context.platform, "Sorry, I couldn't load the items. Please try again.");
+      await sendMessage(userId, context.platform, "Sorry, I couldn't load the items. Please try again.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -352,7 +357,7 @@ const toolHandlers = {
       const food = await restaurantTools.getFoodById(foodId);
 
       if (!food) {
-        await sendMessage(userId, context.platform, "Sorry, that item is not available.");
+        await sendMessage(userId, context.platform, "Sorry, that item is not available.", { businessId: context.businessId });
         return { reply: null, updatedContext: context };
       }
 
@@ -404,7 +409,8 @@ const toolHandlers = {
         '✅ Added to Cart!',
         `*${food.name}* x${quantity} - AUD ${food.price * quantity}\n\n🛒 Cart: ${itemCount} item(s) | Total: AUD ${total}\n\nWhat would you like to do?`,
         'Keep adding or checkout!',
-        buttons
+        buttons,
+        { businessId: context.businessId }
       );
 
       return {
@@ -419,7 +425,7 @@ const toolHandlers = {
       };
     } catch (error) {
       console.error('Error adding to cart:', error);
-      await sendMessage(userId, context.platform, "Sorry, couldn't add that item. Please try again.");
+      await sendMessage(userId, context.platform, "Sorry, couldn't add that item. Please try again.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -444,7 +450,7 @@ const toolHandlers = {
       }
 
       if (!itemName) {
-        await sendMessage(userId, context.platform, "Please specify which item you want to add.");
+        await sendMessage(userId, context.platform, "Please specify which item you want to add.", { businessId: context.businessId });
         return { reply: null, updatedContext: context };
       }
 
@@ -466,7 +472,8 @@ const toolHandlers = {
       if (matchingItems.length === 0) {
         // Item not found - show helpful message
         await sendMessage(userId, context.platform,
-          `❌ Sorry, "${itemName}" is not available on our menu.\n\nType "menu" to see what we have! 🍽️`
+          `❌ Sorry, "${itemName}" is not available on our menu.\n\nType "menu" to see what we have! 🍽️`,
+          { businessId: context.businessId }
         );
         return { reply: null, updatedContext: context };
       }
@@ -520,7 +527,8 @@ const toolHandlers = {
           '✅ Added to Cart!',
           `*${food.name}* x${quantity} - AUD ${food.price * quantity}\n\n🛒 Cart: ${itemCount} item(s) | Total: AUD ${total}\n\nWhat would you like to do?`,
           'Keep adding or checkout!',
-          buttons
+          buttons,
+          { businessId: context.businessId }
         );
 
         return {
@@ -549,7 +557,8 @@ const toolHandlers = {
         `Found ${matchingItems.length} item(s) matching "${itemName}".\nSelect the one you want:`,
         'Tap to add to cart',
         'Select Item',
-        [{ title: 'Matching Items', rows }]
+        [{ title: 'Matching Items', rows }],
+        { businessId: context.businessId }
       );
 
       return {
@@ -562,7 +571,7 @@ const toolHandlers = {
       };
     } catch (error) {
       console.error('Error adding item by name:', error);
-      await sendMessage(userId, context.platform, "Sorry, couldn't find that item. Try browsing our menu!");
+      await sendMessage(userId, context.platform, "Sorry, couldn't find that item. Try browsing our menu!", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -576,7 +585,7 @@ const toolHandlers = {
       const notFoundItems = [];
 
       if (items.length === 0) {
-        await sendMessage(userId, context.platform, "Please specify which items you want to add.");
+        await sendMessage(userId, context.platform, "Please specify which items you want to add.", { businessId: context.businessId });
         return { reply: null, updatedContext: context };
       }
 
@@ -624,7 +633,8 @@ const toolHandlers = {
       // Build response
       if (addedItems.length === 0) {
         await sendMessage(userId, context.platform,
-          `❌ Sorry, none of these items are available:\n${notFoundItems.map(n => `• ${n}`).join('\n')}\n\nType "menu" to see what we have! 🍽️`
+          `❌ Sorry, none of these items are available:\n${notFoundItems.map(n => `• ${n}`).join('\n')}\n\nType "menu" to see what we have! 🍽️`,
+          { businessId: context.businessId }
         );
         return { reply: null, updatedContext: context };
       }
@@ -669,7 +679,8 @@ const toolHandlers = {
         '✅ Items Added to Cart!',
         message,
         'Continue shopping or checkout!',
-        buttons
+        buttons,
+        { businessId: context.businessId }
       );
 
       return {
@@ -683,7 +694,7 @@ const toolHandlers = {
       };
     } catch (error) {
       console.error('Error adding multiple items:', error);
-      await sendMessage(userId, context.platform, "Sorry, couldn't add those items. Please try again.");
+      await sendMessage(userId, context.platform, "Sorry, couldn't add those items. Please try again.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -693,7 +704,7 @@ const toolHandlers = {
     const cart = context.cart || [];
 
     if (cart.length === 0) {
-      await sendMessage(userId, context.platform, "Your cart is empty! Let me show you our menu.");
+      await sendMessage(userId, context.platform, "Your cart is empty! Let me show you our menu.", { businessId: context.businessId });
       return await toolHandlers.show_food_menu({}, userId, context);
     }
 
@@ -725,7 +736,8 @@ const toolHandlers = {
       '🛒 Your Cart',
       `${cartLines}\n━━━━━━━━━━━━━━━\nSubtotal: AUD ${total}\n\nWould you like to add more items or proceed to checkout?`,
       'You can add more items anytime!',
-      buttons
+      buttons,
+      { businessId: context.businessId }
     );
 
     return {
@@ -792,7 +804,8 @@ const toolHandlers = {
     // If no valid items after validation
     if (validatedItems.length === 0) {
       await sendMessage(userId, context.platform,
-        `❌ Sorry, none of the items are available:\n${invalidItems.map(n => `• ${n}`).join('\n')}\n\nType "menu" to see what we have! 🍽️`
+        `❌ Sorry, none of the items are available:\n${invalidItems.map(n => `• ${n}`).join('\n')}\n\nType "menu" to see what we have! 🍽️`,
+        { businessId: context.businessId }
       );
       return await toolHandlers.show_food_menu({}, userId, context);
     }
@@ -800,7 +813,8 @@ const toolHandlers = {
     // Notify about invalid items if any
     if (invalidItems.length > 0) {
       await sendMessage(userId, context.platform,
-        `⚠️ Note: These items are not available and were removed:\n${invalidItems.map(n => `• ${n}`).join('\n')}`
+        `⚠️ Note: These items are not available and were removed:\n${invalidItems.map(n => `• ${n}`).join('\n')}`,
+        { businessId: context.businessId }
       );
     }
 
@@ -860,7 +874,8 @@ const toolHandlers = {
       '🛒 Confirm & Pay',
       bodyText,
       `Order #${orderId}`,
-      buttons
+      buttons,
+      { businessId: context.businessId }
     );
 
     return {
@@ -904,7 +919,8 @@ const toolHandlers = {
       '💳 Payment Method',
       'How would you like to pay?',
       'Select to continue',
-      buttons
+      buttons,
+      { businessId: context.businessId }
     );
 
     return {
@@ -923,7 +939,8 @@ const toolHandlers = {
     await restaurantTools.selectPayment(context.pendingOrder.orderId, 'CASH');
 
     await sendMessage(userId, context.platform,
-      "✅ Order Confirmed! Please pay cash at the counter.\n\nThank you for choosing Momo House! 🥟"
+      "✅ Order Confirmed! Please pay cash at the counter.\n\nThank you for choosing Momo House! 🥟",
+      { businessId: context.businessId }
     );
 
     // Clean up session
@@ -944,11 +961,11 @@ const toolHandlers = {
   pay_online: async (args, userId, context) => {
     try {
       if (!context.pendingOrder || !context.pendingOrder.orderId) {
-        await sendMessage(userId, context.platform, "Session expired. Please order again.");
+        await sendMessage(userId, context.platform, "Session expired. Please order again.", { businessId: context.businessId });
         return await toolHandlers.show_food_menu({}, userId, context);
       }
 
-      await sendMessage(userId, context.platform, "Generating secure payment link... ⏳");
+      await sendMessage(userId, context.platform, "Generating secure payment link... ⏳", { businessId: context.businessId });
 
       const paymentLink = await restaurantTools.generatePaymentLink(context.pendingOrder.orderId);
 
@@ -966,7 +983,8 @@ const toolHandlers = {
 
       if (context.platform === 'whatsapp') {
         await sendMessage(userId, context.platform,
-          `Click the link below to pay securely via Stripe:\n\n${paymentLink}\n\nWe will confirm your order automatically once paid! ✅`
+          `Click the link below to pay securely via Stripe:\n\n${paymentLink}\n\nWe will confirm your order automatically once paid! ✅`,
+          { businessId: context.businessId }
         );
       } else {
         // Messenger can use buttons
@@ -976,7 +994,8 @@ const toolHandlers = {
           'Pay Securely',
           'Click below to complete your payment via Stripe',
           'Stripe Secure Payment',
-          [{ type: 'url', url: paymentLink, title: 'Pay Now 💳' }]
+          [{ type: 'url', url: paymentLink, title: 'Pay Now 💳' }],
+          { businessId: context.businessId }
         );
       }
 
@@ -992,7 +1011,7 @@ const toolHandlers = {
 
     } catch (error) {
       console.error('Error generating payment link:', error);
-      await sendMessage(userId, context.platform, "Sorry, I couldn't generate the payment link. Please try paying with Cash.");
+      await sendMessage(userId, context.platform, "Sorry, I couldn't generate the payment link. Please try paying with Cash.", { businessId: context.businessId });
       return await toolHandlers.show_dine_in_payment_options({}, userId, context);
     }
   },
@@ -1035,7 +1054,7 @@ const toolHandlers = {
         const cart = context.cart || [];
 
         if (cart.length === 0) {
-          await sendMessage(userId, context.platform, "Your cart is empty! Cannot proceed with order.");
+          await sendMessage(userId, context.platform, "Your cart is empty! Cannot proceed with order.", { businessId: context.businessId });
           return await toolHandlers.show_food_menu({}, userId, context);
         }
 
@@ -1082,7 +1101,8 @@ const toolHandlers = {
         // Fallback without database
         const orderId = `MH${Date.now().toString().slice(-6)}`;
         await sendMessage(userId, context.platform,
-          `✅ Order Confirmed!\n\nThank you for your order! Your food is being prepared.\n\nOrder ID: #${orderId}\n\nEnjoy your meal! 🥟`
+          `✅ Order Confirmed!\n\nThank you for your order! Your food is being prepared.\n\nOrder ID: #${orderId}\n\nEnjoy your meal! 🥟`,
+          { businessId: context.businessId }
         );
         return {
           reply: null,
@@ -1104,7 +1124,8 @@ const toolHandlers = {
       const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
       await sendMessage(userId, context.platform,
-        `❌ Order Cancelled\n\n${itemCount} item(s) removed from cart.\n\nNo worries! Feel free to browse our menu again whenever you're ready.\n\nType "menu" to start a new order! 🍽️`
+        `❌ Order Cancelled\n\n${itemCount} item(s) removed from cart.\n\nNo worries! Feel free to browse our menu again whenever you're ready.\n\nType "menu" to start a new order! 🍽️`,
+        { businessId: context.businessId }
       );
       return {
         reply: null,
@@ -1143,7 +1164,8 @@ const toolHandlers = {
         '⚠️ Cancel Order?',
         `Are you sure you want to cancel?\n\n🛒 Cart: ${itemCount} item(s)\n💰 Total: Rs.${total}\n\nThis will remove all items from your cart.`,
         'Please confirm',
-        buttons
+        buttons,
+        { businessId: context.businessId }
       );
 
       return {
@@ -1170,7 +1192,8 @@ const toolHandlers = {
 
       if (orders.length === 0) {
         await sendMessage(userId, context.platform,
-          `📋 *Order History*\n\nYou haven't placed any orders yet!\n\nType "menu" to start your first order! 🍽️`
+          `📋 *Order History*\n\nYou haven't placed any orders yet!\n\nType "menu" to start your first order! 🍽️`,
+          { businessId: context.businessId }
         );
         return { reply: null, updatedContext: context };
       }
@@ -1200,7 +1223,7 @@ const toolHandlers = {
         historyText += `   💳 ${order.payment_method || 'Pending'}\n`;
       }
 
-      await sendMessage(userId, context.platform, historyText);
+      await sendMessage(userId, context.platform, historyText, { businessId: context.businessId });
 
       return {
         reply: null,
@@ -1212,7 +1235,7 @@ const toolHandlers = {
 
     } catch (error) {
       console.error('Error fetching order history:', error);
-      await sendMessage(userId, context.platform, "Sorry, I couldn't check your order history right now.");
+      await sendMessage(userId, context.platform, "Sorry, I couldn't check your order history right now.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -1229,7 +1252,8 @@ const toolHandlers = {
 
       if (foods.length === 0) {
         await sendMessage(userId, context.platform,
-          `🤔 I couldn't find any specific items for "${tag}", but we have lots of other delicious options!\n\nType "menu" to see our full range. 🍽️`
+          `🤔 I couldn't find any specific items for "${tag}", but we have lots of other delicious options!\n\nType "menu" to see our full range. 🍽️`,
+          { businessId: context.businessId }
         );
         return { reply: null, updatedContext: context };
       }
@@ -1255,7 +1279,8 @@ const toolHandlers = {
         body,
         'Tap to add to cart',
         'View Recommendations',
-        [{ title: 'Recommended', rows }]
+        [{ title: 'Recommended', rows }],
+        { businessId: context.businessId }
       );
 
       return {
@@ -1270,7 +1295,7 @@ const toolHandlers = {
 
     } catch (error) {
       console.error('Error getting recommendations:', error);
-      await sendMessage(userId, context.platform, "Sorry, I'm having trouble getting recommendations right now.");
+      await sendMessage(userId, context.platform, "Sorry, I'm having trouble getting recommendations right now.", { businessId: context.businessId });
       return { reply: null, updatedContext: context };
     }
   },
@@ -1280,7 +1305,7 @@ const toolHandlers = {
     const message = args.message || "Hello! Welcome to our restaurant 🍽️ Type 'menu' to see our delicious options!";
     console.log(`━━━ SENDING TEXT REPLY ━━━`);
     console.log(`💬 Message: ${message}`);
-    await sendMessage(userId, context.platform, message);
+    await sendMessage(userId, context.platform, message, { businessId: context.businessId });
     return {
       reply: null,
       updatedContext: context
@@ -1441,7 +1466,7 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
       } else if (paymentText.includes('cash') || paymentText.includes('cod') || paymentText.includes('counter')) {
         return await toolHandlers.pay_cash_counter({}, userId, context);
       } else {
-        await sendMessage(userId, context.platform, "Please choose: 'Stripe Online' or 'Cash'");
+        await sendMessage(userId, context.platform, "Please choose: 'Stripe Online' or 'Cash'", { businessId: context.businessId });
         return { reply: null, updatedContext: context };
       }
     }
@@ -1454,7 +1479,8 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
         if (context.paymentLink) {
           if (context.platform === 'whatsapp') {
             await sendMessage(userId, context.platform,
-              `Here's your payment link again:\n\n${context.paymentLink}\n\nClick the link above to pay securely via Stripe! ✅`
+              `Here's your payment link again:\n\n${context.paymentLink}\n\nClick the link above to pay securely via Stripe! ✅`,
+              { businessId: context.businessId }
             );
           } else {
             await sendButtonMessage(
@@ -1463,7 +1489,8 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
               'Pay Securely',
               'Click below to complete your payment via Stripe',
               'Stripe Secure Payment',
-              [{ type: 'url', url: context.paymentLink, title: 'Pay Now 💳' }]
+              [{ type: 'url', url: context.paymentLink, title: 'Pay Now 💳' }],
+              { businessId: context.businessId }
             );
           }
           return { reply: null, updatedContext: context };
@@ -1505,7 +1532,7 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
 
     if (!isValid) {
       console.warn(`Validation failed for ${decision.toolCall.name}: ${validationMsg}`);
-      await sendMessage(userId, context.platform, validationMsg);
+      await sendMessage(userId, context.platform, validationMsg, { businessId: context.businessId });
       return { reply: null, updatedContext: context }; // Stop execution
     }
 
@@ -1520,7 +1547,7 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
 
   // Fallback
   const fallbackMessage = decision.response || "Hello! Welcome to our restaurant 🍽️ Type 'menu' to see our delicious options!";
-  await sendMessage(userId, context.platform, fallbackMessage);
+  await sendMessage(userId, context.platform, fallbackMessage, { businessId: context.businessId });
   return {
     reply: null,
     updatedContext: context
