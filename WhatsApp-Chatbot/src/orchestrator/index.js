@@ -56,7 +56,8 @@ async function handleIncomingMessage(message) {
       [
         { type: 'reply', reply: { id: 'age_verified_yes', title: '✅ I am 18+' } },
         { type: 'reply', reply: { id: 'age_verified_no', title: '❌ I am under 18' } }
-      ]
+      ],
+      { businessId: context.businessId }
     );
 
     return; // STOP PROCESSING
