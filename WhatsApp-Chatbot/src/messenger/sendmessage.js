@@ -24,8 +24,16 @@ export async function sendMessengerMessage(recipientPsid, messageText, options =
   let { pageAccessToken, apiVersion } = getConfig();
 
   if (options.pageId) {
+    console.log(`🔍 Resolving token for Page ID: ${options.pageId}`);
     const token = await TenantResolver.getMessengerToken(options.pageId);
-    if (token) pageAccessToken = token;
+    if (token) {
+      console.log('✅ Found page-specific token in DB');
+      pageAccessToken = token;
+    } else {
+      console.log('⚠️ No token found in DB for this Page ID, using default env token');
+    }
+  } else {
+    console.log('⚠️ No Page ID provided in options, using default env token');
   }
 
   if (!pageAccessToken) {
