@@ -1727,3 +1727,212 @@ input:checked+.slider:before {
     border-color: #cbd5e1;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
 }
+
+/* Menu Manager Modal Styles */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    /* Removed backdrop-filter to prevent blurring issues */
+    background: rgba(15, 23, 42, 0.6);
+    z-index: 9998;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.menu-modal,
+.confirm-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    z-index: 9999;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menu-modal {
+    width: 90%;
+    max-width: 550px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.confirm-modal {
+    width: 90%;
+    max-width: 420px;
+    text-align: center;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -45%) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.modal-header h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.close-modal-btn {
+    background: #f1f5f9;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: rotate(90deg);
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 15px;
+    color: #0f172a;
+    background: #f8fafc;
+    transition: all 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #0f172a;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: #94a3b8;
+}
+
+textarea.form-textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 12px;
+    background: #f8fafc;
+    /* Subtle bg for checkbox area */
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.checkbox-label:hover {
+    border-color: #cbd5e1;
+    background: white;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #0f172a;
+}
+
+.checkbox-label span {
+    font-weight: 500;
+    color: #475569;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.secondary-btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    color: #475569;
+    background: white;
+    border: 1px solid #cbd5e1;
+}
+
+.secondary-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.primary-btn,
+.danger-btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.primary-btn:hover,
+.danger-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
