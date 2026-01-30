@@ -407,10 +407,16 @@ app.post('/api/webview/checkout', async (req, res) => {
 
       console.log(`💵 Cash payment confirmed for Order #${orderNumber}`);
 
-      // Send confirmation message to user with 4-digit order number
+      // Build order details string
+      const orderItemsText = cart.map(item =>
+        `• ${item.name} x${item.quantity} - Rs. ${(item.price * item.quantity).toFixed(2)}`
+      ).join('\n');
+      const orderTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      // Send confirmation message to user with order details
       // Pass businessId from context to use correct page token for multi-tenant
       await sendMessage(userId, platform,
-        `✅ Order Confirmed!\n\n📋 Order Number: #${orderNumber}\n\nPlease pay cash at the counter.\nShow this number to staff.\n\nThank you for choosing Momo House! 🥟`,
+        `✅ Order Confirmed!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: Rs. ${orderTotal.toFixed(2)}\n\nPlease pay cash at the counter.\nShow this number to staff.\n\nThank you for your order! 🙏`,
         { businessId: context.businessId }
       );
 
