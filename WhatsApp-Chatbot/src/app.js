@@ -272,6 +272,127 @@ app.post('/api/messenger/order', async (req, res) => {
   }
 });
 
+// WEBVIEW CHECKOUT WITH PAYMENT METHOD
+app.post('/api/webview/checkout', async (req, res) => {
+  const { userId, items, paymentMethod } = req.body;
+
+  console.log(`📥 Webview Checkout - User: ${userId}, Payment: ${paymentMethod}`);
+
+  if (!userId || !items || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Invalid data' });
+  }
+
+  if (!paymentMethod || !['cash', 'stripe'].includes(paymentMethod)) {
+    return res.status(400).json({ success: false, message: 'Invalid payment method' });
+  }
+
+  try {
+    // 1. Get or Init Context
+    let context = await getContext(userId);
+    if (!context) {
+      context = { userId, platform: 'messenger', cart: [] };
+    }
+
+    // Detect platform
+    let platform = context.platform || 'messenger';
+    if (!context.platform) {
+      if (userId.length >= 12 && userId.length <= 15) {
+        platform = 'whatsapp';
+      } else {
+        platform = 'messenger';
+      }
+      context.platform = platform;
+    }
+
+    // 2. Validate and prepare cart items
+    const cart = [];
+    for (const item of items) {
+      const matchingItems = await restaurantTools.getFoodByName(item.name);
+      if (matchingItems.length > 0) {
+        const food = matchingItems[0];
+        cart.push({
+          foodId: food.id,
+          name: food.name,
+          price: parseFloat(food.price),
+          quantity: item.quantity
+        });
+      }
+    }
+
+    if (cart.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid items in cart' });
+    }
+
+    // 3. Create order in database
+    const finalOrder = await restaurantTools.finalizeOrderFromCart(userId, cart, {
+      service_type: 'dine_in',
+      payment_method: paymentMethod === 'cash' ? 'cash' : null,
+      platform: platform
+    });
+
+    const orderId = finalOrder.id;
+    console.log(`✅ Order #${orderId} created for ${userId}`);
+
+    // 4. Handle payment method
+    if (paymentMethod === 'stripe') {
+      // Generate Stripe payment link
+      const paymentUrl = await restaurantTools.generatePaymentLink(orderId);
+
+      console.log(`💳 Stripe payment link generated for Order #${orderId}`);
+
+      // Update context
+      await updateContext(userId, {
+        ...context,
+        cart: [],
+        stage: 'awaiting_payment',
+        lastAction: 'webview_stripe_checkout',
+        pendingOrder: { orderId, items: cart, total: finalOrder.total_amount }
+      });
+
+      return res.json({
+        success: true,
+        orderId: orderId,
+        paymentUrl: paymentUrl
+      });
+
+    } else {
+      // Cash payment - confirm order immediately
+      await restaurantTools.selectPayment(orderId, 'CASH');
+
+      // Format order number as 4 digits
+      const orderNumber = String(orderId).padStart(4, '0');
+
+      console.log(`💵 Cash payment confirmed for Order #${orderNumber}`);
+
+      // Send confirmation message to user with 4-digit order number
+      await sendMessage(userId, platform,
+        `✅ Order Confirmed!\n\n📋 Order Number: #${orderNumber}\n\nPlease pay cash at the counter.\nShow this number to staff.\n\nThank you for choosing Momo House! 🥟`
+      );
+
+      // Update context and clear session
+      await updateContext(userId, {
+        ...context,
+        cart: [],
+        stage: 'order_complete',
+        lastAction: 'webview_cash_checkout',
+        pendingOrder: null
+      });
+
+      // Clear session cart
+      await restaurantTools.deleteSessionAfterOrder(userId);
+
+      return res.json({
+        success: true,
+        orderId: orderId,
+        message: 'Order confirmed with cash payment'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error in webview checkout:', error);
+    res.status(500).json({ success: false, message: 'Checkout failed: ' + error.message });
+  }
+});
 
 
 // Handle JSON parse errors

@@ -4,7 +4,8 @@ const state = {
     menuData: [],
     cart: {},
     currentCategory: 'all',
-    searchQuery: ''
+    searchQuery: '',
+    userId: null
 };
 
 // ===== INITIALIZATION =====
@@ -13,6 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initializeApp() {
+    // Get userId from URL parameters and store in state
+    const urlParams = new URLSearchParams(window.location.search);
+    state.userId = urlParams.get('userId') || urlParams.get('user_id') || urlParams.get('psid');
+
+    console.log('User ID:', state.userId);
+
     await loadMenuData();
     await loadUserCart(); // Load user's session cart
     setupEventListeners();
@@ -24,9 +31,8 @@ async function initializeApp() {
 }
 
 async function loadUserCart() {
-    // Get userId from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get('userId');
+    // Use userId from state (already parsed in initializeApp)
+    const userId = state.userId;
 
     if (!userId) return;
 
@@ -116,17 +122,32 @@ function setupEventListeners() {
     // Modal checkout button
     if (modalCheckoutBtn) {
         modalCheckoutBtn.addEventListener('click', () => {
-            handleCheckout();
             closeCartModal();
+            showPaymentModal();
         });
     }
+
+    // Payment modal
+    const closePaymentModalBtn = document.getElementById('close-payment-modal');
+    const paymentModal = document.getElementById('payment-modal');
+    const payCashBtn = document.getElementById('pay-cash-btn');
+    const payStripeBtn = document.getElementById('pay-stripe-btn');
+
+    if (closePaymentModalBtn) closePaymentModalBtn.addEventListener('click', closePaymentModal);
+    if (paymentModal) {
+        paymentModal.addEventListener('click', (e) => {
+            if (e.target === paymentModal) closePaymentModal();
+        });
+    }
+    if (payCashBtn) payCashBtn.addEventListener('click', handleCashPayment);
+    if (payStripeBtn) payStripeBtn.addEventListener('click', handleStripePayment);
 
     // Form submission
     const form = document.getElementById('order-form');
     if (form) {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            handleCheckout();
+            showPaymentModal();
         });
     }
 }
@@ -275,6 +296,48 @@ function attachQuantityListeners() {
     });
 }
 
+// Update a single menu item's UI without re-rendering the entire list
+function updateMenuItemUI(itemId, quantity) {
+    const menuItem = document.querySelector(`.menu-item[data-item-id="${itemId}"]`);
+    if (!menuItem) return;
+
+    const item = state.menuData.find(i => i.id === itemId);
+    if (!item) return;
+
+    const itemTotal = (quantity * parseFloat(item.price)).toFixed(2);
+    const isSelected = quantity > 0;
+
+    // Update selected state
+    if (isSelected) {
+        menuItem.classList.add('selected');
+    } else {
+        menuItem.classList.remove('selected');
+    }
+
+    // Update quantity display
+    const qtyDisplay = menuItem.querySelector('.qty-display');
+    if (qtyDisplay) qtyDisplay.textContent = quantity;
+
+    // Update minus button disabled state
+    const minusBtn = menuItem.querySelector('.qty-minus');
+    if (minusBtn) minusBtn.disabled = quantity === 0;
+
+    // Update item total
+    const quantityControls = menuItem.querySelector('.quantity-controls');
+    let itemTotalEl = menuItem.querySelector('.item-total');
+
+    if (quantity > 0) {
+        if (!itemTotalEl) {
+            itemTotalEl = document.createElement('div');
+            itemTotalEl.className = 'item-total';
+            quantityControls.appendChild(itemTotalEl);
+        }
+        itemTotalEl.textContent = `$${itemTotal}`;
+    } else if (itemTotalEl) {
+        itemTotalEl.remove();
+    }
+}
+
 // ===== CART MANAGEMENT =====
 function updateQuantity(itemId, delta) {
     const currentQty = state.cart[itemId] || 0;
@@ -286,8 +349,8 @@ function updateQuantity(itemId, delta) {
         state.cart[itemId] = newQty;
     }
 
-    // Update UI
-    renderMenu();
+    // Update UI - targeted update instead of full re-render
+    updateMenuItemUI(itemId, newQty);
     updateCartPreview();
     updateTotal();
 
@@ -504,6 +567,170 @@ function updateModalTotal() {
     const totalEl = document.getElementById('modal-total');
     if (subtotalEl) subtotalEl.textContent = `$${total.toFixed(2)}`;
     if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+}
+
+// ===== PAYMENT MODAL FUNCTIONS =====
+function showPaymentModal() {
+    const itemCount = Object.values(state.cart).reduce((sum, qty) => sum + qty, 0);
+    if (itemCount === 0) {
+        showToast('Cart is empty', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('payment-modal');
+    if (modal) {
+        modal.classList.add('active');
+        updatePaymentModalTotal();
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closePaymentModal() {
+    const modal = document.getElementById('payment-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+function updatePaymentModalTotal() {
+    const total = Object.entries(state.cart).reduce((sum, [itemId, quantity]) => {
+        const item = state.menuData.find(i => i.id === parseInt(itemId));
+        return sum + (item ? (item.price * quantity) : 0);
+    }, 0);
+
+    const totalEl = document.getElementById('payment-modal-total');
+    if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+}
+
+async function handleCashPayment() {
+    const payCashBtn = document.getElementById('pay-cash-btn');
+    if (payCashBtn) payCashBtn.classList.add('loading');
+
+    await processPayment('cash');
+}
+
+async function handleStripePayment() {
+    const payStripeBtn = document.getElementById('pay-stripe-btn');
+    if (payStripeBtn) payStripeBtn.classList.add('loading');
+
+    await processPayment('stripe');
+}
+
+async function processPayment(paymentMethod) {
+    // Use userId from global state
+    const userId = state.userId;
+
+    if (!userId) {
+        showToast('Error: User ID missing. Please reopen from chat.', 'error');
+        closePaymentModal();
+        return;
+    }
+
+    const orderData = Object.entries(state.cart).map(([itemId, quantity]) => {
+        const item = state.menuData.find(i => i.id === parseInt(itemId));
+        return {
+            foodId: item.id,
+            name: item.name,
+            quantity: quantity,
+            price: item.price
+        };
+    });
+
+    if (orderData.length === 0) {
+        showToast('Cart is empty', 'error');
+        closePaymentModal();
+        return;
+    }
+
+    showToast('Processing...', 'success');
+
+    try {
+        const response = await fetch('/api/webview/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userId,
+                items: orderData,
+                paymentMethod: paymentMethod
+            })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Checkout failed');
+        }
+
+        // Format order number as 4 digits (pad with zeros)
+        const orderNumber = result.orderId ? String(result.orderId).padStart(4, '0') : '0000';
+
+        if (paymentMethod === 'stripe' && result.paymentUrl) {
+            // Redirect to Stripe payment page
+            showToast(`Order #${orderNumber} - Redirecting to payment...`, 'success');
+            window.location.href = result.paymentUrl;
+        } else {
+            // Cash payment - order confirmed
+            state.cart = {};
+            updateTotal();
+            closePaymentModal();
+
+            // Try to close webview after 1.5 seconds
+            setTimeout(() => {
+                // 1. Try Messenger Extensions
+                if (typeof MessengerExtensions !== 'undefined') {
+                    MessengerExtensions.requestCloseBrowser(
+                        function success() { /* Closed successfully */ },
+                        function error(err) {
+                            // Silently fail - user will see the success screen
+                            console.log("MessengerExtensions close failed (expected in testing):", err);
+                        }
+                    );
+                }
+
+                // 2. Try window.close()
+                try {
+                    window.close();
+                } catch (e) {
+                    // Ignore expected security error
+                }
+            }, 1500);
+
+            // Show success screen with clear instruction
+            document.body.innerHTML = `
+                <div style="text-align:center; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div style="background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); max-width: 350px; width: 100%;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">✅</div>
+                        <h1 style="color: #2d3436; margin-bottom: 10px; font-size: 1.5rem;">Order Confirmed!</h1>
+                        
+                        <div style="background: linear-gradient(135deg, #00B894 0%, #00a884 100%); color: white; padding: 15px; border-radius: 12px; margin: 20px 0;">
+                            <div style="font-size: 0.85rem; opacity: 0.9;">Your Order Number</div>
+                            <div style="font-size: 2.5rem; font-weight: 700; letter-spacing: 3px;">#${orderNumber}</div>
+                        </div>
+
+                        <p style="color: #636e72; margin-bottom: 25px; line-height: 1.5;">
+                            Please pay at the counter.<br>
+                            <strong>You can now close this window.</strong>
+                        </p>
+
+                        <button onclick="window.close()" style="width: 100%; padding: 14px; background: #dfe6e9; color: #2d3436; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 600;">
+                            Close Window
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+    } catch (error) {
+        console.error('Checkout error:', error);
+        showToast('Error: ' + error.message, 'error');
+
+        // Remove loading state
+        const payCashBtn = document.getElementById('pay-cash-btn');
+        const payStripeBtn = document.getElementById('pay-stripe-btn');
+        if (payCashBtn) payCashBtn.classList.remove('loading');
+        if (payStripeBtn) payStripeBtn.classList.remove('loading');
+    }
 }
 
 // ===== TOAST NOTIFICATIONS =====

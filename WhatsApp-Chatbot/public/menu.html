@@ -119,6 +119,37 @@
         </div>
     </div>
 
+    <!-- Payment Method Modal -->
+    <div class="payment-modal" id="payment-modal">
+        <div class="payment-modal-content">
+            <div class="payment-modal-header">
+                <h2 class="payment-modal-title">💳 Select Payment Method</h2>
+                <button type="button" class="close-modal-btn" id="close-payment-modal" aria-label="Close">✕</button>
+            </div>
+            <div class="payment-modal-body">
+                <p class="payment-instruction">How would you like to pay for your order?</p>
+                <div class="payment-options">
+                    <button type="button" class="payment-option-btn cash-btn" id="pay-cash-btn">
+                        <span class="payment-icon">💵</span>
+                        <span class="payment-label">Pay with Cash</span>
+                        <span class="payment-desc">Pay at the counter</span>
+                    </button>
+                    <button type="button" class="payment-option-btn stripe-btn" id="pay-stripe-btn">
+                        <span class="payment-icon">💳</span>
+                        <span class="payment-label">Pay with Stripe</span>
+                        <span class="payment-desc">Secure online payment</span>
+                    </button>
+                </div>
+            </div>
+            <div class="payment-modal-footer">
+                <div class="payment-total">
+                    <span>Order Total:</span>
+                    <span id="payment-modal-total">$0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
