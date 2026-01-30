@@ -99,6 +99,10 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// JSON body parser for all routes AFTER Stripe webhook
+// Stripe webhook uses express.raw() so it won't be affected
+app.use(express.json());
+
 // API: Get menu items or categories
 app.get('/api/menu', async (req, res) => {
   try {
