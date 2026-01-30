@@ -287,7 +287,8 @@ app.post('/api/messenger/order', async (req, res) => {
       [
         { type: 'reply', reply: { id: 'view_all_categories', title: 'Add More ➕' } },
         { type: 'reply', reply: { id: 'proceed_checkout', title: 'Checkout 🛒' } }
-      ]
+      ],
+      { businessId: context.businessId }
     );
 
     res.json({ success: true });
@@ -300,9 +301,9 @@ app.post('/api/messenger/order', async (req, res) => {
 
 // WEBVIEW CHECKOUT WITH PAYMENT METHOD
 app.post('/api/webview/checkout', async (req, res) => {
-  const { userId, items, paymentMethod } = req.body;
+  const { userId, items, paymentMethod, restaurantId } = req.body;
 
-  console.log(`📥 Webview Checkout - User: ${userId}, Payment: ${paymentMethod}`);
+  console.log(`📥 Webview Checkout - User: ${userId}, Payment: ${paymentMethod}, Restaurant: ${restaurantId || 'default'}`);
 
   if (!userId || !items || items.length === 0) {
     return res.status(400).json({ success: false, message: 'Invalid data' });
@@ -312,11 +313,19 @@ app.post('/api/webview/checkout', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid payment method' });
   }
 
+  // Parse restaurantId - use from request body or fallback to context
+  const targetRestaurantId = parseInt(restaurantId) || null;
+
   try {
     // 1. Get or Init Context
     let context = await getContext(userId);
     if (!context) {
       context = { userId, platform: 'messenger', cart: [] };
+    }
+
+    // Update context with restaurantId if provided
+    if (targetRestaurantId && context.restaurantId !== targetRestaurantId) {
+      context.restaurantId = targetRestaurantId;
     }
 
     // Detect platform
@@ -330,10 +339,13 @@ app.post('/api/webview/checkout', async (req, res) => {
       context.platform = platform;
     }
 
-    // 2. Validate and prepare cart items
+    // 2. Validate and prepare cart items - USE restaurantId for lookup
     const cart = [];
+    const effectiveRestaurantId = context.restaurantId || targetRestaurantId;
+
     for (const item of items) {
-      const matchingItems = await restaurantTools.getFoodByName(item.name);
+      // Pass restaurantId to ensure we get the correct restaurant's foods
+      const matchingItems = await restaurantTools.getFoodByName(item.name, effectiveRestaurantId);
       if (matchingItems.length > 0) {
         const food = matchingItems[0];
         cart.push({
@@ -349,15 +361,16 @@ app.post('/api/webview/checkout', async (req, res) => {
       return res.status(400).json({ success: false, message: 'No valid items in cart' });
     }
 
-    // 3. Create order in database
+    // 3. Create order in database - associate with correct restaurant
     const finalOrder = await restaurantTools.finalizeOrderFromCart(userId, cart, {
       service_type: 'dine_in',
       payment_method: paymentMethod === 'cash' ? 'cash' : null,
-      platform: platform
+      platform: platform,
+      restaurant_id: effectiveRestaurantId
     });
 
     const orderId = finalOrder.id;
-    console.log(`✅ Order #${orderId} created for ${userId}`);
+    console.log(`✅ Order #${orderId} created for ${userId} (Restaurant: ${effectiveRestaurantId || 'default'})`);
 
     // 4. Handle payment method
     if (paymentMethod === 'stripe') {
@@ -391,8 +404,10 @@ app.post('/api/webview/checkout', async (req, res) => {
       console.log(`💵 Cash payment confirmed for Order #${orderNumber}`);
 
       // Send confirmation message to user with 4-digit order number
+      // Pass businessId from context to use correct page token for multi-tenant
       await sendMessage(userId, platform,
-        `✅ Order Confirmed!\n\n📋 Order Number: #${orderNumber}\n\nPlease pay cash at the counter.\nShow this number to staff.\n\nThank you for choosing Momo House! 🥟`
+        `✅ Order Confirmed!\n\n📋 Order Number: #${orderNumber}\n\nPlease pay cash at the counter.\nShow this number to staff.\n\nThank you for choosing Momo House! 🥟`,
+        { businessId: context.businessId }
       );
 
       // Update context and clear session

@@ -654,6 +654,7 @@ async function processPayment(paymentMethod) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 userId: userId,
+                restaurantId: state.restaurantId, // Pass restaurant ID for multi-tenant
                 items: orderData,
                 paymentMethod: paymentMethod
             })
