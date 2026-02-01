@@ -14,9 +14,9 @@ info:
     email: support@restaurant-api.com
 
 servers:
-  - url: http://localhost:5000/api
+  - url: https://event-bot-admin.chotkari.com/api
     description: Development server
-  - url: https://api.restaurant-management.com/api
+  - url: https://event-bot-admin.chotkari.com/api
     description: Production server
 
 tags:
