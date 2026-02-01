@@ -1,0 +1,709 @@
+openapi: 3.0.0
+info:
+  title: Restaurant Management API - Authentication
+  description: |
+    Comprehensive API documentation for authentication endpoints including:
+    - User registration and login
+    - Remember Me functionality
+    - Password reset flow (Forgot Password)
+    - Staff management
+    - Password change for authenticated users
+  version: 2.0.0
+  contact:
+    name: API Support
+    email: support@restaurant-api.com
+
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+  - url: https://api.restaurant-management.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration endpoints
+  - name: Password Management
+    description: Password reset and change functionality
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authenticated requests. Format - Bearer {token}
+
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: integer
+          description: User ID
+          example: 1
+        username:
+          type: string
+          description: Username
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john@example.com"
+        role:
+          type: string
+          enum: [restaurant_owner, staff]
+          description: User role
+          example: "restaurant_owner"
+        token:
+          type: string
+          description: JWT authentication token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expiresIn:
+          type: string
+          description: Token expiration duration
+          example: "7 days"
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          description: Username for the new user
+          example: "john_doe"
+          minLength: 3
+        email:
+          type: string
+          format: email
+          description: Email address
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          description: User password (will be hashed)
+          example: "SecurePass123!"
+          minLength: 6
+        role:
+          type: string
+          enum: [restaurant_owner, staff]
+          description: User role (defaults to restaurant_owner)
+          example: "restaurant_owner"
+        restaurant_name:
+          type: string
+          description: Name of the restaurant (for owners)
+          example: "John's Bistro"
+        address:
+          type: string
+          description: Restaurant address (for owners)
+          example: "123 Main Street, New York, NY 10001"
+        phone:
+          type: string
+          description: Restaurant contact number (for owners)
+          example: "+1-555-0123"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          description: User password
+          example: "SecurePass123!"
+        rememberMe:
+          type: boolean
+          description: Keep user logged in for 30 days (default is 7 days)
+          example: true
+          default: false
+
+    RegisterStaffRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          description: Username for the staff member
+          example: "jane_staff"
+          minLength: 3
+        email:
+          type: string
+          format: email
+          description: Staff email address
+          example: "jane@example.com"
+        password:
+          type: string
+          format: password
+          description: Staff password (will be hashed)
+          example: "StaffPass123!"
+          minLength: 6
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address of the account to reset
+          example: "john@example.com"
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          format: password
+          description: New password
+          example: "NewSecurePass123!"
+          minLength: 6
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          description: Current password for verification
+          example: "OldPassword123!"
+        newPassword:
+          type: string
+          format: password
+          description: New password to set
+          example: "NewSecurePass123!"
+          minLength: 6
+
+    StaffResponse:
+      type: object
+      properties:
+        _id:
+          type: integer
+          description: Staff user ID
+          example: 2
+        username:
+          type: string
+          description: Staff username
+          example: "jane_staff"
+        email:
+          type: string
+          format: email
+          description: Staff email address
+          example: "jane@example.com"
+        role:
+          type: string
+          description: User role (always 'staff')
+          example: "staff"
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation successful"
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Password reset email sent"
+        resetToken:
+          type: string
+          description: Reset token (only in development mode)
+          example: "abc123def456..."
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Password reset successful"
+        token:
+          type: string
+          description: New JWT token for immediate login
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "User already exists"
+
+  responses:
+    UnauthorizedError:
+      description: Authentication token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            noToken:
+              value:
+                message: "Not authorized, no token"
+            invalidToken:
+              value:
+                message: "Not authorized, token failed"
+            userNotFound:
+              value:
+                message: "Not authorized, user not found"
+
+    ForbiddenError:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: "Not authorized to access this route"
+
+    BadRequestError:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: "Server error"
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user (restaurant owner)
+      description: |
+        Registers a new user as a restaurant owner. This endpoint automatically creates a new restaurant 
+        entry associated with the user. If `restaurant_name` is not provided, a default name will be generated.
+
+        **Note:** This endpoint is intended for restaurant owners. Staff members should be registered 
+        via the `/auth/register-staff` endpoint by an authenticated owner.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            examples:
+              fullDetails:
+                summary: Registration with full restaurant details
+                value:
+                  username: "Harry Restaurant 3"
+                  restaurant_name: "Harry Restaurant 2"
+                  email: "harry3@gmail.com"
+                  password: "Test@123"
+                  address: "Lele"
+                  phone: "9860484578"
+                  role: "restaurant_owner"
+              minimal:
+                summary: Minimal registration (defaults applied)
+                value:
+                  username: "Harry Restaurant 3"
+                  email: "harry3@gmail.com"
+                  password: "Test@123"
+      responses:
+        "201":
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              example:
+                _id: 1
+                username: "Harry Restaurant 3"
+                email: "harry3@gmail.com"
+                role: "restaurant_owner"
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "400":
+          description: Bad request - User already exists or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                userExists:
+                  value:
+                    message: "User already exists"
+                invalidData:
+                  value:
+                    message: "Invalid user data"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user and get token
+      description: |
+        Authenticates a user with their email and password. Returns a JWT token upon successful authentication.
+
+        **Remember Me Feature:**
+        - If `rememberMe` is `true`, the token will be valid for 30 days
+        - If `rememberMe` is `false` or not provided, the token will be valid for 7 days
+
+        The token should be included in the Authorization header as `Bearer {token}` for protected routes.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            examples:
+              normalLogin:
+                summary: Standard login (7 days)
+                value:
+                  email: "john@example.com"
+                  password: "SecurePass123!"
+                  rememberMe: false
+              rememberMeLogin:
+                summary: Login with Remember Me (30 days)
+                value:
+                  email: "john@example.com"
+                  password: "SecurePass123!"
+                  rememberMe: true
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              examples:
+                normalLogin:
+                  summary: Standard login response
+                  value:
+                    _id: 1
+                    username: "john_doe"
+                    email: "john@example.com"
+                    role: "restaurant_owner"
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    expiresIn: "7 days"
+                rememberMeLogin:
+                  summary: Remember Me login response
+                  value:
+                    _id: 1
+                    username: "john_doe"
+                    email: "john@example.com"
+                    role: "restaurant_owner"
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    expiresIn: "30 days"
+        "401":
+          description: Unauthorized - Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Invalid email or password"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /auth/register-staff:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new staff member (Owner only)
+      description: |
+        Registers a new staff member for the authenticated restaurant owner's restaurant. 
+        The staff member will be automatically associated with the owner's restaurant.
+
+        **Authentication Required:** This endpoint requires a valid JWT token from a restaurant owner.
+
+        **Authorization:** Only users with the `restaurant_owner` role can access this endpoint.
+      operationId: registerStaff
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterStaffRequest"
+            example:
+              username: "jane_staff"
+              email: "jane@example.com"
+              password: "StaffPass123!"
+      responses:
+        "201":
+          description: Staff member successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffResponse"
+              example:
+                _id: 2
+                username: "jane_staff"
+                email: "jane@example.com"
+                role: "staff"
+        "400":
+          description: Bad request - User already exists or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                userExists:
+                  value:
+                    message: "User already exists"
+                invalidData:
+                  value:
+                    message: "Invalid user data"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Password Management
+      summary: Request password reset
+      description: |
+        Initiates the password reset process by sending a reset link to the user's email.
+
+        **Process Flow:**
+        1. User submits their email address
+        2. System generates a secure reset token
+        3. Reset link is sent to the user's email
+        4. Token is valid for 1 hour
+        5. User clicks the link to reset password
+
+        **Security Features:**
+        - Token is hashed before storage
+        - Token expires after 1 hour
+        - Only one active reset token per user
+        - Original token is only sent via email
+
+        **Note:** In development mode, the reset token may be included in the response for testing purposes.
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+            example:
+              email: "john@example.com"
+      responses:
+        "200":
+          description: Password reset email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+              examples:
+                production:
+                  summary: Production response
+                  value:
+                    success: true
+                    message: "Password reset email sent"
+                development:
+                  summary: Development response (with token)
+                  value:
+                    success: true
+                    message: "Password reset email sent"
+                    resetToken: "abc123def456ghi789jkl012mno345pqr678"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "No user found with that email address"
+        "500":
+          description: Server error or email sending failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                emailError:
+                  value:
+                    message: "Email could not be sent"
+                serverError:
+                  value:
+                    message: "Server error"
+
+  /auth/reset-password/{resetToken}:
+    put:
+      tags:
+        - Password Management
+      summary: Reset password using token
+      description: |
+        Resets the user's password using the token received via email.
+
+        **Process:**
+        1. User receives reset link via email
+        2. Link contains the reset token
+        3. User submits new password with the token
+        4. System validates token and updates password
+        5. User receives new JWT token for immediate login
+
+        **Token Validation:**
+        - Token must match the hashed token in database
+        - Token must not be expired (1 hour validity)
+        - Token is single-use (cleared after successful reset)
+
+        **Security:**
+        - New password is hashed before storage
+        - Reset token is cleared after use
+        - Returns new JWT for immediate authentication
+      operationId: resetPassword
+      parameters:
+        - in: path
+          name: resetToken
+          required: true
+          schema:
+            type: string
+          description: Password reset token from email
+          example: "abc123def456ghi789jkl012mno345pqr678"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+            example:
+              password: "NewSecurePass123!"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+              example:
+                success: true
+                message: "Password reset successful"
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidToken:
+                  value:
+                    message: "Invalid or expired reset token"
+                expiredToken:
+                  value:
+                    message: "Reset token has expired"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /auth/change-password:
+    put:
+      tags:
+        - Password Management
+      summary: Change password (authenticated users)
+      description: |
+        Allows authenticated users to change their password by providing their current password.
+
+        **Security Requirements:**
+        - User must be authenticated (valid JWT token)
+        - Current password must be correct
+        - New password must meet minimum requirements (6+ characters)
+
+        **Use Cases:**
+        - User wants to update their password for security
+        - Regular password rotation
+        - Security best practices
+
+        **Note:** This is different from password reset, which is used when the user forgot their password.
+      operationId: changePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+            example:
+              currentPassword: "OldPassword123!"
+              newPassword: "NewSecurePass123!"
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+              example:
+                success: true
+                message: "Password changed successfully"
+        "401":
+          description: Unauthorized - Invalid current password or no token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                wrongPassword:
+                  value:
+                    message: "Current password is incorrect"
+                noToken:
+                  value:
+                    message: "Not authorized, no token"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "User not found"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+security: []
