@@ -145,14 +145,11 @@ ALTER TABLE orders
 ADD CONSTRAINT orders_status_check
 CHECK (status IN (
     'created',
-    'pending',
-    'accepted',
     'confirmed',
     'preparing',
     'ready',
-    'completed',
-    'cancelled',
-    'rejected'
+    'delivered',
+    'cancelled'
 ));
 
 
