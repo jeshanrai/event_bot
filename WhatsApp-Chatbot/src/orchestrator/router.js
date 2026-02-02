@@ -1647,7 +1647,11 @@ async function routeIntent({
       };
 
       // Auto-show menu after verification for better UX
-      return await toolHandlers.show_food_menu({}, userId, verifiedContext);
+      return await toolHandlers.show_welcome_message(
+        {},
+        userId,
+        verifiedContext,
+      );
     }
 
     if (id === "age_verified_no") {
