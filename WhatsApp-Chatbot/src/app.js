@@ -55,26 +55,27 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
     console.log(`💰 Payment received for Order #${orderId}`);
 
     try {
-      // 1. Update order status in database
+      // 1. Update order status in database and get restaurant_id for multi-tenant token lookup
       const orderResult = await db.query(
-        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1 RETURNING customer_platform_id, platform",
+        "UPDATE orders SET status = 'confirmed', payment_method = 'online' WHERE id = $1 RETURNING customer_platform_id, platform, restaurant_id",
         [orderId]
       );
       console.log(`✅ Order #${orderId} marked as confirmed/online`);
 
       // 2. Notify the user
       if (orderResult.rows.length > 0) {
-        const { customer_platform_id: userId, platform } = orderResult.rows[0];
+        const { customer_platform_id: userId, platform, restaurant_id: restaurantId } = orderResult.rows[0];
 
         // Format order number as 4 digits
         const orderNumber = String(orderId).padStart(4, '0');
 
         if (userId && platform) {
-          console.log(`📤 Sending payment confirmation to ${userId} on ${platform}`);
+          console.log(`📤 Sending payment confirmation to ${userId} on ${platform} (Restaurant: ${restaurantId || 'default'})`);
           await sendMessage(
             userId,
             platform,
-            `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`
+            `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`,
+            { businessId: restaurantId }
           );
 
           // 3. Clear/Reset User Context

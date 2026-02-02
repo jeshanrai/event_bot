@@ -85,6 +85,25 @@ const TenantResolver = {
     },
 
     /**
+     * Get Page Access Token for a specific Restaurant ID
+     * @param {number} restaurantId 
+     * @returns {Promise<string|null>}
+     */
+    getMessengerTokenByRestaurantId: async (restaurantId) => {
+        if (!restaurantId) return null;
+        try {
+            const res = await db.query(
+                'SELECT page_access_token FROM facebook_credentials WHERE restaurant_id = $1 AND is_active = true',
+                [restaurantId]
+            );
+            return res.rows[0]?.page_access_token || null;
+        } catch (error) {
+            console.error('❌ Error fetching Messenger token by restaurant ID:', error);
+            return null;
+        }
+    },
+
+    /**
      * Get WhatsApp Access Token for a specific Phone Number ID
      * @param {string} phoneNumberId 
      * @returns {Promise<string|null>}

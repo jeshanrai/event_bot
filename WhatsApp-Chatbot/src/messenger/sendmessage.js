@@ -16,25 +16,47 @@ function logFinalResponse(to, type, content) {
 }
 
 /**
+ * Helper to resolve page access token from pageId (could be Page ID or Restaurant ID)
+ */
+async function resolvePageToken(pageIdOrRestaurantId, defaultToken) {
+  if (!pageIdOrRestaurantId) {
+    console.log('⚠️ No Page ID provided in options, using default env token');
+    return defaultToken;
+  }
+
+  // Check if it's a numeric restaurant ID or a string Page ID
+  const isRestaurantId = typeof pageIdOrRestaurantId === 'number' ||
+    (typeof pageIdOrRestaurantId === 'string' && pageIdOrRestaurantId.length < 10);
+
+  if (isRestaurantId) {
+    console.log(`🔍 Resolving token for Restaurant ID: ${pageIdOrRestaurantId}`);
+    const token = await TenantResolver.getMessengerTokenByRestaurantId(pageIdOrRestaurantId);
+    if (token) {
+      console.log('✅ Found restaurant-specific token in DB');
+      return token;
+    }
+    console.log('⚠️ No token found in DB for this Restaurant ID, using default env token');
+  } else {
+    console.log(`🔍 Resolving token for Page ID: ${pageIdOrRestaurantId}`);
+    const token = await TenantResolver.getMessengerToken(pageIdOrRestaurantId);
+    if (token) {
+      console.log('✅ Found page-specific token in DB');
+      return token;
+    }
+    console.log('⚠️ No token found in DB for this Page ID, using default env token');
+  }
+
+  return defaultToken;
+}
+
+/**
  * Send a text message via Facebook Messenger Send API
  */
 export async function sendMessengerMessage(recipientPsid, messageText, options = {}) {
   logFinalResponse(recipientPsid, 'Text', messageText);
 
-  let { pageAccessToken, apiVersion } = getConfig();
-
-  if (options.pageId) {
-    console.log(`🔍 Resolving token for Page ID: ${options.pageId}`);
-    const token = await TenantResolver.getMessengerToken(options.pageId);
-    if (token) {
-      console.log('✅ Found page-specific token in DB');
-      pageAccessToken = token;
-    } else {
-      console.log('⚠️ No token found in DB for this Page ID, using default env token');
-    }
-  } else {
-    console.log('⚠️ No Page ID provided in options, using default env token');
-  }
+  const { pageAccessToken: defaultToken, apiVersion } = getConfig();
+  const pageAccessToken = await resolvePageToken(options.pageId, defaultToken);
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -84,12 +106,8 @@ export async function sendMessengerMessage(recipientPsid, messageText, options =
 export async function sendMessengerQuickReplies(recipientPsid, text, quickReplies, options = {}) {
   logFinalResponse(recipientPsid, 'Quick Replies', `${text}\n[Options: ${quickReplies.map(q => q.title).join(', ')}]`);
 
-  let { pageAccessToken, apiVersion } = getConfig();
-
-  if (options.pageId) {
-    const token = await TenantResolver.getMessengerToken(options.pageId);
-    if (token) pageAccessToken = token;
-  }
+  const { pageAccessToken: defaultToken, apiVersion } = getConfig();
+  const pageAccessToken = await resolvePageToken(options.pageId, defaultToken);
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -141,12 +159,8 @@ export async function sendMessengerQuickReplies(recipientPsid, text, quickReplie
 export async function sendMessengerGenericTemplate(recipientPsid, elements, options = {}) {
   logFinalResponse(recipientPsid, 'Generic Template', `[${elements.length} cards]`);
 
-  let { pageAccessToken, apiVersion } = getConfig();
-
-  if (options.pageId) {
-    const token = await TenantResolver.getMessengerToken(options.pageId);
-    if (token) pageAccessToken = token;
-  }
+  const { pageAccessToken: defaultToken, apiVersion } = getConfig();
+  const pageAccessToken = await resolvePageToken(options.pageId, defaultToken);
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -208,12 +222,8 @@ export async function sendMessengerGenericTemplate(recipientPsid, elements, opti
 export async function sendMessengerButtonTemplate(recipientPsid, text, buttons, options = {}) {
   logFinalResponse(recipientPsid, 'Button Template', `${text}\n[Buttons: ${buttons.map(b => b.title).join(', ')}]`);
 
-  let { pageAccessToken, apiVersion } = getConfig();
-
-  if (options.pageId) {
-    const token = await TenantResolver.getMessengerToken(options.pageId);
-    if (token) pageAccessToken = token;
-  }
+  const { pageAccessToken: defaultToken, apiVersion } = getConfig();
+  const pageAccessToken = await resolvePageToken(options.pageId, defaultToken);
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -283,12 +293,8 @@ export async function sendMessengerButtonTemplate(recipientPsid, text, buttons, 
 export async function sendMessengerImage(recipientPsid, imageUrl, isReusable = true, options = {}) {
   logFinalResponse(recipientPsid, 'Image', `[Image: ${imageUrl}]`);
 
-  let { pageAccessToken, apiVersion } = getConfig();
-
-  if (options.pageId) {
-    const token = await TenantResolver.getMessengerToken(options.pageId);
-    if (token) pageAccessToken = token;
-  }
+  const { pageAccessToken: defaultToken, apiVersion } = getConfig();
+  const pageAccessToken = await resolvePageToken(options.pageId, defaultToken);
 
   if (!pageAccessToken) {
     console.error('❌ Missing MESSENGER_PAGE_ACCESS_TOKEN');
@@ -339,12 +345,8 @@ export async function sendMessengerImage(recipientPsid, imageUrl, isReusable = t
  * Send sender action (typing indicator, mark seen)
  */
 export async function sendMessengerSenderAction(recipientPsid, action, options = {}) {
-  let { pageAccessToken, apiVersion } = getConfig();
-
-  if (options.pageId) {
-    const token = await TenantResolver.getMessengerToken(options.pageId);
-    if (token) pageAccessToken = token;
-  }
+  const { pageAccessToken: defaultToken, apiVersion } = getConfig();
+  const pageAccessToken = await resolvePageToken(options.pageId, defaultToken);
 
   if (!pageAccessToken) return null;
 
