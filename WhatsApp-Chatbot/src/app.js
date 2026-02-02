@@ -70,11 +70,25 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
         const orderNumber = String(orderId).padStart(4, '0');
 
         if (userId && platform) {
+          // Fetch order items for the receipt
+          const itemsResult = await db.query(`
+            SELECT oi.quantity, f.name, f.price 
+            FROM order_items oi 
+            JOIN foods f ON oi.food_id = f.id 
+            WHERE oi.order_id = $1
+          `, [orderId]);
+
+          const orderItemsText = itemsResult.rows.map(item =>
+            `• ${item.name} x${item.quantity} - Rs. ${(item.price * item.quantity).toFixed(2)}`
+          ).join('\n');
+
+          const orderTotal = itemsResult.rows.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
           console.log(`📤 Sending payment confirmation to ${userId} on ${platform} (Restaurant: ${restaurantId || 'default'})`);
           await sendMessage(
             userId,
             platform,
-            `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`,
+            `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: Rs. ${orderTotal.toFixed(2)}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`,
             { businessId: restaurantId }
           );
 
@@ -96,6 +110,83 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
   }
 
   res.send();
+});
+
+// Stripe Payment Success Page
+app.get('/payment/success', async (req, res) => {
+  const sessionId = req.query.session_id;
+
+  try {
+    if (!sessionId) {
+      return res.status(400).send('Session ID missing');
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const orderId = session.metadata.orderId;
+    const orderNumber = String(orderId).padStart(4, '0');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Payment Successful</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 40px 20px; background-color: #f0f2f5; }
+          .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+          .icon { font-size: 64px; margin-bottom: 20px; }
+          h1 { color: #1a1a1a; margin-bottom: 10px; }
+          p { color: #4a4a4a; font-size: 18px; line-height: 1.5; }
+          .order-number { font-weight: bold; color: #2e7d32; font-size: 24px; margin: 20px 0; }
+          .close-btn { background-color: #0084ff; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; transition: background 0.2s; }
+          .close-btn:hover { background-color: #006bce; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">✅</div>
+          <h1>Payment Successful!</h1>
+          <p>Thank you for your order.</p>
+          <div class="order-number">Order #${orderNumber}</div>
+          <p>Your order has been confirmed.</p>
+          <p style="font-size: 14px; color: #888;">You can now close this window and return to the chat.</p>
+          <button class="close-btn" onclick="closeWindow()">Close Window</button>
+        </div>
+        <script>
+          (function(d, s, id){
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {return;}
+            js = d.createElement(s); js.id = id;
+            js.src = "//connect.facebook.net/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+          }(document, 'script', 'Messenger'));
+
+          function closeWindow() {
+             try {
+                // Try Messenger Extensions first
+                MessengerExtensions.requestCloseBrowser(function success() {
+                    console.log("Webview closing");
+                }, function error(err) {
+                    // Fallback to window.close
+                    console.error(err);
+                    window.close();
+                });
+             } catch (e) {
+                // Fallback if SDK not loaded
+                window.close();
+             }
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    res.send(html);
+
+  } catch (error) {
+    console.error('Error verifying session:', error);
+    res.status(500).send('Error verifying payment');
+  }
 });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
