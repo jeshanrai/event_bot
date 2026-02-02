@@ -1,0 +1,222 @@
+# Menu Schemas
+# This file contains all schema definitions for menu management endpoints
+
+components:
+  schemas:
+    # ==================== Menu Schemas ====================
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Menu item ID
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Restaurant ID
+          example: 1
+        name:
+          type: string
+          description: Name of the menu item
+          example: "Chicken Burger"
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          description: Description of the menu item
+          example: "Juicy grilled chicken with fresh vegetables"
+          maxLength: 500
+        price:
+          type: number
+          format: decimal
+          description: Price of the item
+          example: 250.50
+          minimum: 0
+        category:
+          type: string
+          description: Category of the item
+          example: "Main Course"
+          maxLength: 50
+        image_url:
+          type: string
+          nullable: true
+          description: URL of the item image
+          example: "https://example.com/images/burger.jpg"
+          maxLength: 500
+        available:
+          type: boolean
+          description: Whether the item is available for ordering
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-02-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-02-01T10:30:00Z"
+
+    CreateMenuItemRequest:
+      type: object
+      required:
+        - name
+        - price
+        - category
+      properties:
+        name:
+          type: string
+          description: Name of the menu item
+          example: "Chicken Burger"
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          description: Description of the menu item
+          example: "Juicy grilled chicken with fresh vegetables"
+          maxLength: 500
+        price:
+          type: number
+          format: decimal
+          description: Price of the item
+          example: 250.50
+          minimum: 0
+        category:
+          type: string
+          description: Category of the item
+          example: "Main Course"
+          minLength: 1
+          maxLength: 50
+        image_url:
+          type: string
+          description: URL of the item image
+          example: "https://example.com/images/burger.jpg"
+          maxLength: 500
+        available:
+          type: boolean
+          description: Whether the item is available (defaults to true)
+          example: true
+          default: true
+
+    UpdateMenuItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the menu item
+          example: "Chicken Burger Deluxe"
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          description: Description of the menu item
+          example: "Premium grilled chicken with fresh vegetables and special sauce"
+          maxLength: 500
+        price:
+          type: number
+          format: decimal
+          description: Price of the item
+          example: 299.50
+          minimum: 0
+        category:
+          type: string
+          description: Category of the item
+          example: "Main Course"
+          minLength: 1
+          maxLength: 50
+        image_url:
+          type: string
+          description: URL of the item image
+          example: "https://example.com/images/burger-deluxe.jpg"
+          maxLength: 500
+        available:
+          type: boolean
+          description: Whether the item is available
+          example: true
+
+    ToggleAvailabilityRequest:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+          description: Availability status
+          example: false
+
+    Category:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Category name
+          example: "Main Course"
+        count:
+          type: integer
+          description: Number of items in this category
+          example: 15
+
+    CsvUploadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Upload result message
+          example: "CSV processing completed"
+        total:
+          type: integer
+          description: Total number of items processed
+          example: 50
+        success:
+          type: integer
+          description: Number of successfully added items
+          example: 48
+        errors:
+          type: integer
+          description: Number of failed items
+          example: 2
+
+    DeleteMenuItemResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Deletion confirmation message
+          example: "Menu item deleted successfully"
+
+  responses:
+    MenuItemNotFound:
+      description: Menu item not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: "Menu item not found"
+
+    UnauthorizedMenuAccess:
+      description: Not authorized to access this menu item
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: "Not authorized to access this item"
+
+    InvalidMenuData:
+      description: Invalid menu item data
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            missingFields:
+              value:
+                message: "Name, price, and category are required"
+            invalidType:
+              value:
+                message: "Available field must be a boolean"
+            missingFile:
+              value:
+                message: "Please upload a CSV file"

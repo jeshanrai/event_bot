@@ -1,0 +1,488 @@
+# Integration Schemas
+# This file contains all schema definitions for Facebook and WhatsApp integration endpoints
+
+components:
+  schemas:
+    # ==================== Facebook Integration Schemas ====================
+    FacebookCredential:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Credential ID
+          example: 1
+        user_id:
+          type: integer
+          description: User ID who connected the page
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Restaurant ID
+          example: 1
+        page_id:
+          type: string
+          description: Facebook Page ID
+          example: "123456789012345"
+        page_name:
+          type: string
+          description: Facebook Page name
+          example: "John's Restaurant"
+        page_access_token:
+          type: string
+          description: Facebook Page access token (sensitive)
+          example: "EAAxxxxxxxxxxxxxxx"
+        webhook_url:
+          type: string
+          nullable: true
+          description: Webhook URL for receiving messages
+          example: "https://api.chotkari.com/webhook/facebook/123456789012345"
+        status:
+          type: string
+          description: Connection status
+          example: "active"
+        is_active:
+          type: boolean
+          description: Whether the connection is active
+          example: true
+        connected_at:
+          type: string
+          format: date-time
+          description: Connection timestamp
+          example: "2024-02-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-02-01T10:00:00Z"
+
+    ConnectFacebookRequest:
+      type: object
+      required:
+        - page_id
+        - page_access_token
+      properties:
+        page_id:
+          type: string
+          description: Facebook Page ID
+          example: "123456789012345"
+        page_name:
+          type: string
+          description: Facebook Page name
+          example: "John's Restaurant"
+        page_access_token:
+          type: string
+          description: Facebook Page access token
+          example: "EAAxxxxxxxxxxxxxxx"
+
+    ConnectFacebookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Facebook Page connected and subscribed successfully"
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            page_name:
+              type: string
+              example: "John's Restaurant"
+            page_id:
+              type: string
+              example: "123456789012345"
+            webhook_url:
+              type: string
+              example: "https://api.chotkari.com/webhook/facebook/123456789012345"
+            connected_at:
+              type: string
+              format: date-time
+              example: "2024-02-01T10:00:00Z"
+
+    FacebookStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        connected:
+          type: boolean
+          example: true
+        data:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              example: 1
+            page_id:
+              type: string
+              example: "123456789012345"
+            page_name:
+              type: string
+              example: "John's Restaurant"
+            webhook_url:
+              type: string
+              example: "https://api.chotkari.com/webhook/facebook/123456789012345"
+            connected_at:
+              type: string
+              format: date-time
+              example: "2024-02-01T10:00:00Z"
+        message:
+          type: string
+          example: "Facebook Page not connected"
+
+    FacebookPageListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        page_id:
+          type: string
+          example: "123456789012345"
+        page_name:
+          type: string
+          example: "John's Restaurant"
+        status:
+          type: string
+          example: "active"
+        is_active:
+          type: boolean
+          example: true
+        webhook_url:
+          type: string
+          example: "https://api.chotkari.com/webhook/facebook/123456789012345"
+        connected_at:
+          type: string
+          format: date-time
+          example: "2024-02-01T10:00:00Z"
+
+    FacebookPagesListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacebookPageListItem"
+
+    # ==================== WhatsApp Integration Schemas ====================
+    WhatsAppCredential:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Credential ID
+          example: 1
+        user_id:
+          type: integer
+          description: User ID who connected WhatsApp
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Restaurant ID
+          example: 1
+        phone_number_id:
+          type: string
+          nullable: true
+          description: WhatsApp Phone Number ID
+          example: "123456789012345"
+        whatsapp_business_account_id:
+          type: string
+          nullable: true
+          description: WhatsApp Business Account ID (WABA)
+          example: "987654321098765"
+        access_token:
+          type: string
+          description: Facebook/WhatsApp access token (sensitive)
+          example: "EAAxxxxxxxxxxxxxxx"
+        phone_number:
+          type: string
+          nullable: true
+          description: Verified phone number name
+          example: "John's Restaurant"
+        display_phone_number:
+          type: string
+          nullable: true
+          description: Display phone number
+          example: "+1234567890"
+        quality_rating:
+          type: string
+          nullable: true
+          description: WhatsApp quality rating
+          example: "GREEN"
+          enum: [GREEN, YELLOW, RED, UNKNOWN]
+        status:
+          type: string
+          description: Connection status
+          example: "active"
+          enum: [active, pending_signup, pending_phone, expired]
+        is_active:
+          type: boolean
+          description: Whether the connection is active
+          example: true
+        webhook_url:
+          type: string
+          nullable: true
+          description: Webhook URL for receiving messages
+          example: "https://api.chotkari.com/webhook/whatsapp/123456789012345"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Token expiration timestamp
+          example: "2024-04-01T10:00:00Z"
+        connected_at:
+          type: string
+          format: date-time
+          description: Connection timestamp
+          example: "2024-02-01T10:00:00Z"
+        last_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last verification timestamp
+          example: "2024-02-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-02-01T10:00:00Z"
+
+    ConnectWhatsAppRequest:
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+          description: Short-lived access token from Facebook/WhatsApp signup flow
+          example: "EAAxxxxxxxxxxxxxxx"
+        waba_id:
+          type: string
+          description: WhatsApp Business Account ID (optional)
+          example: "987654321098765"
+        phone_number_id:
+          type: string
+          description: WhatsApp Phone Number ID (optional)
+          example: "123456789012345"
+
+    ConnectWhatsAppResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "WhatsApp connected successfully"
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            phone_number:
+              type: string
+              example: "+1234567890"
+            quality_rating:
+              type: string
+              example: "GREEN"
+            webhook_url:
+              type: string
+              example: "https://api.chotkari.com/webhook/whatsapp/123456789012345"
+            connected_at:
+              type: string
+              format: date-time
+              example: "2024-02-01T10:00:00Z"
+            status:
+              type: string
+              example: "active"
+
+    WhatsAppStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        connected:
+          type: boolean
+          example: true
+        data:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              example: 1
+            phone_number:
+              type: string
+              example: "+1234567890"
+            quality_rating:
+              type: string
+              example: "GREEN"
+            webhook_url:
+              type: string
+              example: "https://api.chotkari.com/webhook/whatsapp/123456789012345"
+            connected_at:
+              type: string
+              format: date-time
+              example: "2024-02-01T10:00:00Z"
+            last_verified:
+              type: string
+              format: date-time
+              example: "2024-02-01T10:00:00Z"
+            expires_at:
+              type: string
+              format: date-time
+              example: "2024-04-01T10:00:00Z"
+            is_expired:
+              type: boolean
+              example: false
+        message:
+          type: string
+          example: "WhatsApp not connected"
+
+    WhatsAppAccountListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        phone_number:
+          type: string
+          example: "+1234567890"
+        phone_number_id:
+          type: string
+          example: "123456789012345"
+        quality_rating:
+          type: string
+          example: "GREEN"
+        status:
+          type: string
+          example: "active"
+        is_active:
+          type: boolean
+          example: true
+        webhook_url:
+          type: string
+          example: "https://api.chotkari.com/webhook/whatsapp/123456789012345"
+        connected_at:
+          type: string
+          format: date-time
+          example: "2024-02-01T10:00:00Z"
+        expires_at:
+          type: string
+          format: date-time
+          example: "2024-04-01T10:00:00Z"
+
+    WhatsAppAccountsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WhatsAppAccountListItem"
+
+    VerifyConnectionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Connection verified successfully"
+        valid:
+          type: boolean
+          example: true
+
+    # ==================== Common Integration Responses ====================
+    DisconnectResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Connection disconnected successfully"
+
+    IntegrationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Failed to connect"
+        error:
+          type: string
+          example: "Invalid access token"
+
+  responses:
+    # ==================== Integration Error Responses ====================
+    MissingAccessToken:
+      description: Access token not provided
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IntegrationErrorResponse"
+          example:
+            success: false
+            message: "Access Token is required"
+
+    MissingPageCredentials:
+      description: Page ID or access token not provided
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IntegrationErrorResponse"
+          example:
+            success: false
+            message: "Page ID and Access Token are required"
+
+    IntegrationNotFound:
+      description: Integration not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IntegrationErrorResponse"
+          examples:
+            facebook:
+              value:
+                success: false
+                message: "No Facebook connection found"
+            whatsapp:
+              value:
+                success: false
+                message: "No WhatsApp connection found"
+
+    IntegrationFailed:
+      description: Integration operation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IntegrationErrorResponse"
+          examples:
+            facebook:
+              value:
+                success: false
+                message: "Failed to connect Facebook Page"
+                error: "Invalid page access token"
+            whatsapp:
+              value:
+                success: false
+                message: "Failed to connect WhatsApp"
+                error: "Token exchange failed"

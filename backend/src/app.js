@@ -12,9 +12,9 @@ const path = require("path");
 
 const app = express();
 
-// Load Swagger document
+// Load the main Swagger file
 const swaggerDocument = YAML.load(
-  path.join(__dirname, "docs/swagger-auth.yaml"),
+  path.join(__dirname, "docs/swagger/swagger-main.yaml"),
 );
 
 if (process.env.NODE_ENV === "development") {
@@ -51,18 +51,6 @@ const corsOptions = {
   maxAge: 86400,
 };
 
-const options = {
-  customCss: ".swagger-ui .topbar { display: none }",
-  customSiteTitle: "Restaurant API Docs",
-  customfavIcon: "/assets/favicon.ico",
-  swaggerOptions: {
-    persistAuthorization: true, // Keeps the token after page refresh
-    displayRequestDuration: true,
-    filter: true, // Adds a search filter
-    docExpansion: "none", // Collapse all endpoints by default
-  },
-};
-
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(express.json());
@@ -75,12 +63,21 @@ app.get("/", (req, res) => {
 app.use(
   "/api-docs",
   swaggerUi.serve,
-  swaggerUi.setup(swaggerDocument, options),
+  swaggerUi.setup(swaggerDocument, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "Restaurant API Documentation",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+    },
+  }),
 );
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/orders", require("./routes/orderRoutes"));
+app.use("/api/menu", require("./routes/menuRoutes"));
 app.use("/api/plans", plansRoutes);
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/whatsapp", require("./routes/whatsappRoutes"));

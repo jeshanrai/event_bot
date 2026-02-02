@@ -1,0 +1,436 @@
+# Authentication Schemas
+# This file contains all schema definitions for authentication and password management endpoints
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token for authenticated requests. 
+
+        **Format:** Bearer {token}
+
+        **How to get a token:**
+        1. Register: POST /auth/register
+        2. Login: POST /auth/login
+        3. Use the token from the response
+
+        **Token Expiration:**
+        - Standard: 7 days
+        - Remember Me: 30 days
+
+  schemas:
+    # ==================== User Schemas ====================
+    User:
+      type: object
+      properties:
+        _id:
+          type: integer
+          description: User ID
+          example: 1
+        username:
+          type: string
+          description: Username
+          example: "Harry Restaurant 3"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "harry3@gmail.com"
+        role:
+          type: string
+          enum: [restaurant_owner, staff, superadmin]
+          description: User role
+          example: "restaurant_owner"
+        restaurant_id:
+          type: integer
+          nullable: true
+          description: Associated restaurant ID
+          example: 1
+        token:
+          type: string
+          description: JWT authentication token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6InJlc3RhdXJhbnRfb3duZXIiLCJpYXQiOjE2MzkzMDI0MDB9.abc123xyz"
+        expiresIn:
+          type: string
+          description: Token expiration duration
+          example: "7 days"
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2024-02-01T10:00:00Z"
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          description: Username for the new user
+          example: "Harry Restaurant 3"
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+          description: Email address (must be unique)
+          example: "harry3@gmail.com"
+        password:
+          type: string
+          format: password
+          description: User password (will be hashed before storage)
+          example: "Test@123"
+          minLength: 6
+          maxLength: 100
+        role:
+          type: string
+          enum: [restaurant_owner, staff]
+          description: User role (defaults to restaurant_owner)
+          example: "restaurant_owner"
+          default: "restaurant_owner"
+        restaurant_name:
+          type: string
+          description: Name of the restaurant (for owners only)
+          example: "Harry Restaurant 2"
+          maxLength: 100
+        address:
+          type: string
+          description: Restaurant address (for owners only)
+          example: "Lele"
+          maxLength: 255
+        phone:
+          type: string
+          description: Restaurant contact number (for owners only)
+          example: "9860484578"
+          pattern: "^[0-9+\\-\\s()]+$"
+          maxLength: 20
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "harry3@gmail.com"
+        password:
+          type: string
+          format: password
+          description: User password
+          example: "Test@123"
+        rememberMe:
+          type: boolean
+          description: |
+            Keep user logged in for extended period.
+            - false or not provided: Token valid for 7 days
+            - true: Token valid for 30 days
+          example: true
+          default: false
+
+    RegisterStaffRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          description: Username for the staff member
+          example: "jane_staff"
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+          description: Staff email address (must be unique)
+          example: "jane@example.com"
+        password:
+          type: string
+          format: password
+          description: Staff password (will be hashed before storage)
+          example: "StaffPass123!"
+          minLength: 6
+          maxLength: 100
+
+    StaffResponse:
+      type: object
+      properties:
+        _id:
+          type: integer
+          description: Staff user ID
+          example: 2
+        username:
+          type: string
+          description: Staff username
+          example: "jane_staff"
+        email:
+          type: string
+          format: email
+          description: Staff email address
+          example: "jane@example.com"
+        role:
+          type: string
+          description: User role (always 'staff')
+          example: "staff"
+          enum: [staff]
+        restaurant_id:
+          type: integer
+          description: Associated restaurant ID (inherited from owner)
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2024-02-01T10:00:00Z"
+
+    # ==================== Password Management Schemas ====================
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address of the account to reset
+          example: "john@example.com"
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          format: password
+          description: New password (must be at least 6 characters)
+          example: "NewSecurePass123!"
+          minLength: 6
+          maxLength: 100
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          description: Current password for verification
+          example: "OldPassword123!"
+        newPassword:
+          type: string
+          format: password
+          description: New password to set (must be at least 6 characters)
+          example: "NewSecurePass123!"
+          minLength: 6
+          maxLength: 100
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the operation was successful
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Password reset email sent"
+        resetToken:
+          type: string
+          description: |
+            Reset token (only included in development mode for testing).
+            In production, token is only sent via email.
+          example: "abc123def456ghi789jkl012mno345pqr678"
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if password reset was successful
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Password reset successful"
+        token:
+          type: string
+          description: New JWT token for immediate login after reset
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    ChangePasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if password change was successful
+          example: true
+        message:
+          type: string
+          description: Success message
+          example: "Password changed successfully"
+
+  responses:
+    # ==================== Authentication Responses ====================
+    UnauthorizedError:
+      description: Authentication token is missing or invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Not authorized, no token"
+          examples:
+            noToken:
+              summary: No token provided
+              value:
+                message: "Not authorized, no token"
+            invalidToken:
+              summary: Invalid or malformed token
+              value:
+                message: "Not authorized, token failed"
+            expiredToken:
+              summary: Token has expired
+              value:
+                message: "Token has expired"
+            userNotFound:
+              summary: User not found in database
+              value:
+                message: "Not authorized, user not found"
+
+    ForbiddenError:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+          examples:
+            insufficientPermissions:
+              summary: User lacks required permissions
+              value:
+                message: "Not authorized to access this route"
+            wrongRole:
+              summary: User role not authorized
+              value:
+                message: "User role 'staff' is not authorized to access this route"
+
+    UserAlreadyExists:
+      description: User with this email already exists
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "User already exists"
+
+    InvalidCredentials:
+      description: Invalid email or password
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Invalid email or password"
+
+    UserNotFound:
+      description: User not found with provided email
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+          examples:
+            passwordReset:
+              value:
+                message: "No user found with that email address"
+            changePassword:
+              value:
+                message: "User not found"
+
+    InvalidPasswordResetToken:
+      description: Password reset token is invalid or expired
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+          examples:
+            invalidToken:
+              summary: Invalid reset token
+              value:
+                message: "Invalid or expired reset token"
+            expiredToken:
+              summary: Token has expired
+              value:
+                message: "Reset token has expired"
+
+    IncorrectPassword:
+      description: Current password is incorrect
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Current password is incorrect"
+
+    EmailSendError:
+      description: Failed to send password reset email
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Email could not be sent"
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+          examples:
+            missingFields:
+              summary: Required fields missing
+              value:
+                message: "Name, price, and category are required"
+            invalidFormat:
+              summary: Invalid data format
+              value:
+                message: "Email must be a valid email address"
+            weakPassword:
+              summary: Password doesn't meet requirements
+              value:
+                message: "Password must be at least 6 characters long"

@@ -1,0 +1,309 @@
+# Order Schemas
+# This file contains all schema definitions for order management endpoints
+
+components:
+  schemas:
+    # ==================== Order Schemas ====================
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Order ID
+          example: 1
+        customer_platform_id:
+          type: string
+          description: Customer ID from platform (WhatsApp, web, etc.)
+          example: "whatsapp_123456"
+        restaurant_id:
+          type: integer
+          description: Restaurant ID
+          example: 1
+        platform:
+          type: string
+          enum: [whatsapp, web, mobile]
+          description: Order platform
+          example: "whatsapp"
+        status:
+          type: string
+          enum: [created, confirmed, preparing, ready, delivered, cancelled]
+          description: Order status
+          example: "created"
+        service_type:
+          type: string
+          enum: [dine_in, takeaway, delivery]
+          description: Service type
+          example: "dine_in"
+        payment_method:
+          type: string
+          description: Payment method
+          example: "cash"
+        total_amount:
+          type: number
+          format: decimal
+          description: Total order amount
+          example: 1250.50
+        payment_verified:
+          type: boolean
+          description: Whether payment is verified
+          example: false
+        verified_by:
+          type: integer
+          nullable: true
+          description: User ID who verified the payment
+          example: 5
+        verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Payment verification timestamp
+          example: "2024-02-01T10:30:00Z"
+        rejection_reason:
+          type: string
+          nullable: true
+          description: Reason for payment rejection
+          example: "Invalid payment screenshot"
+        items:
+          type: array
+          description: Order items
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        verified_by_name:
+          type: string
+          nullable: true
+          description: Name of user who verified payment
+          example: "John Doe"
+        restaurant_name:
+          type: string
+          description: Restaurant name
+          example: "John's Bistro"
+        created_at:
+          type: string
+          format: date-time
+          description: Order creation timestamp
+          example: "2024-02-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Order last update timestamp
+          example: "2024-02-01T10:30:00Z"
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Order item ID
+          example: 1
+        food_id:
+          type: integer
+          description: Food item ID
+          example: 10
+        quantity:
+          type: integer
+          description: Quantity ordered
+          example: 2
+        unit_price:
+          type: number
+          format: decimal
+          description: Price per unit
+          example: 250.50
+        food_name:
+          type: string
+          description: Food item name
+          example: "Chicken Burger"
+        image_url:
+          type: string
+          nullable: true
+          description: Food item image URL
+          example: "https://example.com/images/burger.jpg"
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - items
+        - total_amount
+        - payment_method
+      properties:
+        user_id:
+          type: string
+          description: Customer platform ID
+          example: "whatsapp_123456"
+        restaurant_id:
+          type: integer
+          description: Restaurant ID (defaults to 1)
+          example: 1
+        platform:
+          type: string
+          enum: [whatsapp, web, mobile]
+          description: Order platform (defaults to whatsapp)
+          example: "whatsapp"
+        service_type:
+          type: string
+          enum: [dine_in, takeaway, delivery]
+          description: Service type (defaults to dine_in)
+          example: "dine_in"
+        payment_method:
+          type: string
+          description: Payment method
+          example: "cash"
+        total_amount:
+          type: number
+          format: decimal
+          description: Total order amount
+          example: 1250.50
+        items:
+          type: array
+          description: Order items
+          minItems: 1
+          items:
+            type: object
+            required:
+              - food_id
+              - quantity
+              - unit_price
+            properties:
+              food_id:
+                type: integer
+                description: Food item ID
+                example: 10
+              quantity:
+                type: integer
+                minimum: 1
+                description: Quantity
+                example: 2
+              unit_price:
+                type: number
+                format: decimal
+                description: Unit price
+                example: 250.50
+
+    UpdateStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [created, confirmed, preparing, ready, delivered, cancelled]
+          description: New order status
+          example: "confirmed"
+
+    VerifyPaymentRequest:
+      type: object
+      required:
+        - verified
+      properties:
+        verified:
+          type: boolean
+          description: Whether payment is verified
+          example: true
+        reason:
+          type: string
+          description: Rejection reason (required if verified is false)
+          example: "Invalid payment screenshot"
+
+    PaginatedOrdersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        pagination:
+          type: object
+          properties:
+            currentPage:
+              type: integer
+              example: 1
+            totalPages:
+              type: integer
+              example: 10
+            totalOrders:
+              type: integer
+              example: 95
+            limit:
+              type: integer
+              example: 10
+            hasNextPage:
+              type: boolean
+              example: true
+            hasPrevPage:
+              type: boolean
+              example: false
+        filters:
+          type: object
+          properties:
+            status:
+              type: string
+              nullable: true
+              example: "created,confirmed"
+            startDate:
+              type: string
+              format: date-time
+              nullable: true
+              example: "2024-01-01T00:00:00Z"
+            endDate:
+              type: string
+              format: date-time
+              nullable: true
+              example: "2024-02-01T23:59:59Z"
+            restaurant_id:
+              type: integer
+              nullable: true
+              example: 1
+            platform:
+              type: string
+              nullable: true
+              example: "whatsapp"
+            service_type:
+              type: string
+              nullable: true
+              example: "dine_in"
+            payment_verified:
+              type: boolean
+              nullable: true
+              example: false
+
+    DashboardStats:
+      type: object
+      properties:
+        revenueToday:
+          type: number
+          format: decimal
+          description: Total revenue for today
+          example: 15250.50
+        todaysOrders:
+          type: integer
+          description: Total orders today
+          example: 42
+        pendingOrders:
+          type: integer
+          description: Orders in pending status
+          example: 8
+        aiHandledPercentage:
+          type: number
+          description: Percentage of AI handled orders
+          example: 85
+        totalCustomers:
+          type: integer
+          description: Total customers
+          example: 120
+        avgOrderValue:
+          type: number
+          format: decimal
+          description: Average order value
+          example: 363.11
+
+  responses:
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: "Order not found"

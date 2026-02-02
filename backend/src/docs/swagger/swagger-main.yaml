@@ -1,0 +1,1018 @@
+openapi: 3.0.0
+info:
+  title: Restaurant Management API - Complete
+  description: |
+    Complete API documentation for the Restaurant Management System.
+
+    **Available Modules:**
+    - 🔐 Authentication & User Management (3 endpoints)
+    - 🔑 Password Management (3 endpoints)
+    - 🍔 Menu Management (8 endpoints)
+    - 📦 Order Management (6 endpoints)
+    - 📊 Dashboard Analytics (1 endpoint)
+    - 💬 Facebook Integration (5 endpoints)
+    - 📱 WhatsApp Integration (6 endpoints)
+
+    **Total: 32 Endpoints**
+  version: 2.0.0
+  contact:
+    name: API Support
+    email: support@restaurant-api.com
+
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+  - url: https://event-bot-admin.chotkari.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration
+  - name: Password Management
+    description: Password reset and change functionality
+  - name: Menu
+    description: Menu item management
+  - name: Orders
+    description: Order management
+  - name: Dashboard
+    description: Dashboard statistics
+  - name: Facebook Integration
+    description: Facebook Messenger integration
+  - name: WhatsApp Integration
+    description: WhatsApp Business integration
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token. Format - Bearer {token}
+
+  schemas:
+    # ==================== Common Schemas ====================
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation successful"
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Error message"
+
+    # ==================== Auth Schemas ====================
+    User:
+      type: object
+      properties:
+        _id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: "Harry Restaurant 3"
+        email:
+          type: string
+          example: "harry3@gmail.com"
+        role:
+          type: string
+          example: "restaurant_owner"
+        restaurant_id:
+          type: integer
+          example: 1
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expiresIn:
+          type: string
+          example: "7 days"
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          example: "Harry Restaurant 3"
+        email:
+          type: string
+          example: "harry3@gmail.com"
+        password:
+          type: string
+          example: "Test@123"
+        restaurant_name:
+          type: string
+          example: "Harry Restaurant 2"
+        address:
+          type: string
+          example: "Lele"
+        phone:
+          type: string
+          example: "9860484578"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          example: "harry3@gmail.com"
+        password:
+          type: string
+          example: "Test@123"
+        rememberMe:
+          type: boolean
+          example: true
+          default: false
+
+    RegisterStaffRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          example: "jane_staff"
+        email:
+          type: string
+          example: "jane@example.com"
+        password:
+          type: string
+          example: "StaffPass123!"
+
+    # ==================== Password Management Schemas ====================
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Password reset email sent"
+        resetToken:
+          type: string
+          description: "Reset token (only in development mode)"
+          example: "abc123def456..."
+
+    ResetPasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          format: password
+          example: "NewSecurePass123!"
+          minLength: 6
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Password reset successful"
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          example: "OldPassword123!"
+        newPassword:
+          type: string
+          format: password
+          example: "NewSecurePass123!"
+          minLength: 6
+
+    # ==================== Menu Schemas ====================
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        restaurant_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Chicken Burger"
+        description:
+          type: string
+          example: "Juicy grilled chicken"
+        price:
+          type: number
+          example: 250.50
+        category:
+          type: string
+          example: "Main Course"
+        image_url:
+          type: string
+          example: "https://example.com/burger.jpg"
+        available:
+          type: boolean
+          example: true
+
+    CreateMenuItemRequest:
+      type: object
+      required: [name, price, category]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        category:
+          type: string
+        image_url:
+          type: string
+        available:
+          type: boolean
+
+    Category:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Main Course"
+        count:
+          type: integer
+          example: 15
+
+    # ==================== Order Schemas ====================
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        customer_platform_id:
+          type: string
+        status:
+          type: string
+        total_amount:
+          type: number
+        items:
+          type: array
+          items:
+            type: object
+
+    CreateOrderRequest:
+      type: object
+      required: [items, total_amount, payment_method]
+      properties:
+        user_id:
+          type: string
+        restaurant_id:
+          type: integer
+        platform:
+          type: string
+        service_type:
+          type: string
+        payment_method:
+          type: string
+        total_amount:
+          type: number
+        items:
+          type: array
+          items:
+            type: object
+
+    # ==================== Facebook Integration Schemas ====================
+    FacebookCredential:
+      type: object
+      properties:
+        id:
+          type: integer
+        page_id:
+          type: string
+        page_name:
+          type: string
+        webhook_url:
+          type: string
+        is_active:
+          type: boolean
+        connected_at:
+          type: string
+          format: date-time
+
+    ConnectFacebookRequest:
+      type: object
+      required: [page_id, page_access_token]
+      properties:
+        page_id:
+          type: string
+          example: "123456789012345"
+        page_name:
+          type: string
+          example: "John's Restaurant"
+        page_access_token:
+          type: string
+          example: "EAAxxxxxxxxxxxxxxx"
+
+    # ==================== WhatsApp Integration Schemas ====================
+    WhatsAppCredential:
+      type: object
+      properties:
+        id:
+          type: integer
+        phone_number:
+          type: string
+        phone_number_id:
+          type: string
+        quality_rating:
+          type: string
+        status:
+          type: string
+        webhook_url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    ConnectWhatsAppRequest:
+      type: object
+      required: [access_token]
+      properties:
+        access_token:
+          type: string
+          example: "EAAxxxxxxxxxxxxxxx"
+        waba_id:
+          type: string
+          example: "987654321098765"
+        phone_number_id:
+          type: string
+          example: "123456789012345"
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ForbiddenError:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFoundError:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+paths:
+  # ==================== Authentication Endpoints ====================
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user (restaurant owner)
+      description: |
+        Register as restaurant owner. Creates user account and restaurant.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              username: "Harry Restaurant 3"
+              restaurant_name: "Harry Restaurant 2"
+              email: "harry3@gmail.com"
+              password: "Test@123"
+              address: "Lele"
+              phone: "9860484578"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: User already exists
+        "500":
+          description: Server error
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      description: |
+        Login with email and password.
+
+        **Remember Me:**
+        - false/not provided: Token valid for 7 days
+        - true: Token valid for 30 days
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            examples:
+              normal:
+                summary: Normal login (7 days)
+                value:
+                  email: "harry3@gmail.com"
+                  password: "Test@123"
+                  rememberMe: false
+              rememberMe:
+                summary: Remember Me (30 days)
+                value:
+                  email: "harry3@gmail.com"
+                  password: "Test@123"
+                  rememberMe: true
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid credentials
+        "500":
+          description: Server error
+
+  /auth/register-staff:
+    post:
+      tags: [Authentication]
+      summary: Register staff member (Owner only)
+      description: Register staff for the restaurant. Owner only.
+      operationId: registerStaff
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterStaffRequest"
+      responses:
+        "201":
+          description: Staff registered
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  # ==================== Password Management Endpoints ====================
+  /auth/forgot-password:
+    post:
+      tags: [Password Management]
+      summary: Request password reset
+      description: |
+        Send password reset email with token.
+
+        **Process:**
+        1. User submits email
+        2. System generates reset token
+        3. Email sent with reset link
+        4. Token valid for 1 hour
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+            example:
+              email: "john@example.com"
+      responses:
+        "200":
+          description: Reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+              examples:
+                production:
+                  summary: Production response
+                  value:
+                    success: true
+                    message: "Password reset email sent"
+                development:
+                  summary: Development (with token)
+                  value:
+                    success: true
+                    message: "Password reset email sent"
+                    resetToken: "abc123def456..."
+        "404":
+          description: User not found
+        "500":
+          description: Server error
+
+  /auth/reset-password/{resetToken}:
+    put:
+      tags: [Password Management]
+      summary: Reset password using token
+      description: |
+        Reset password with token from email.
+
+        **Process:**
+        1. User receives reset link via email
+        2. User submits new password with token
+        3. System validates and updates password
+        4. Returns new JWT for immediate login
+      operationId: resetPassword
+      parameters:
+        - name: resetToken
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "abc123def456..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+            example:
+              password: "NewSecurePass123!"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+              example:
+                success: true
+                message: "Password reset successful"
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "400":
+          description: Invalid or expired token
+        "500":
+          description: Server error
+
+  /auth/change-password:
+    put:
+      tags: [Password Management]
+      summary: Change password (authenticated users)
+      description: |
+        Change password for authenticated user.
+
+        **Requirements:**
+        - Valid JWT token
+        - Current password must be correct
+        - New password must be 6+ characters
+      operationId: changePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+            example:
+              currentPassword: "OldPassword123!"
+              newPassword: "NewSecurePass123!"
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+              example:
+                success: true
+                message: "Password changed successfully"
+        "401":
+          description: Current password incorrect or not authorized
+        "404":
+          description: User not found
+        "500":
+          description: Server error
+
+  # ==================== Menu Endpoints ====================
+  /menu:
+    get:
+      tags: [Menu]
+      summary: Get all menu items
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          example: "Main Course"
+      responses:
+        "200":
+          description: Menu items retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MenuItem"
+
+    post:
+      tags: [Menu]
+      summary: Create menu item
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMenuItemRequest"
+      responses:
+        "201":
+          description: Menu item created
+
+  /menu/categories:
+    get:
+      tags: [Menu]
+      summary: Get categories with counts
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Categories retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /menu/upload:
+    post:
+      tags: [Menu]
+      summary: Upload menu via CSV
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: CSV processed
+
+  /menu/{id}:
+    get:
+      tags: [Menu]
+      summary: Get menu item by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Menu item retrieved
+
+    put:
+      tags: [Menu]
+      summary: Update menu item
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Menu item updated
+
+    delete:
+      tags: [Menu]
+      summary: Delete menu item
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Menu item deleted
+
+  /menu/{id}/availability:
+    patch:
+      tags: [Menu]
+      summary: Toggle menu item availability
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                available:
+                  type: boolean
+      responses:
+        "200":
+          description: Availability updated
+
+  # ==================== Order Endpoints ====================
+  /orders:
+    get:
+      tags: [Orders]
+      summary: Get orders with pagination
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Orders retrieved
+
+    post:
+      tags: [Orders]
+      summary: Create order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Order created
+
+  /orders/stats:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard statistics
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Stats retrieved
+
+  /orders/history:
+    get:
+      tags: [Orders]
+      summary: Get order history
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: History retrieved
+
+  /orders/{id}/status:
+    patch:
+      tags: [Orders]
+      summary: Update order status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        "200":
+          description: Status updated
+
+  /orders/{id}/verify-payment:
+    patch:
+      tags: [Orders]
+      summary: Verify payment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                verified:
+                  type: boolean
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Payment verified
+
+  # ==================== Facebook Integration Endpoints ====================
+  /integrations/facebook/connect:
+    post:
+      tags: [Facebook Integration]
+      summary: Connect Facebook Page
+      description: Connect Facebook Page for Messenger
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectFacebookRequest"
+      responses:
+        "200":
+          description: Facebook connected
+
+  /integrations/facebook/status:
+    get:
+      tags: [Facebook Integration]
+      summary: Get Facebook status
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Status retrieved
+
+  /integrations/facebook/pages:
+    get:
+      tags: [Facebook Integration]
+      summary: List all Facebook Pages
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Pages retrieved
+
+  /integrations/facebook/disconnect:
+    delete:
+      tags: [Facebook Integration]
+      summary: Disconnect all Facebook Pages
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Disconnected
+
+  /integrations/facebook/pages/{id}:
+    delete:
+      tags: [Facebook Integration]
+      summary: Disconnect specific Facebook Page
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Page disconnected
+
+  # ==================== WhatsApp Integration Endpoints ====================
+  /integrations/whatsapp/connect:
+    post:
+      tags: [WhatsApp Integration]
+      summary: Connect WhatsApp Business
+      description: |
+        Connect WhatsApp with token exchange
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectWhatsAppRequest"
+      responses:
+        "200":
+          description: WhatsApp connected
+
+  /integrations/whatsapp/status:
+    get:
+      tags: [WhatsApp Integration]
+      summary: Get WhatsApp status
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Status retrieved
+
+  /integrations/whatsapp/accounts:
+    get:
+      tags: [WhatsApp Integration]
+      summary: List all WhatsApp accounts
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Accounts retrieved
+
+  /integrations/whatsapp/verify:
+    post:
+      tags: [WhatsApp Integration]
+      summary: Verify WhatsApp connection
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Connection verified
+
+  /integrations/whatsapp/disconnect:
+    delete:
+      tags: [WhatsApp Integration]
+      summary: Disconnect all WhatsApp accounts
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Disconnected
+
+  /integrations/whatsapp/accounts/{id}:
+    delete:
+      tags: [WhatsApp Integration]
+      summary: Disconnect specific WhatsApp account
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Account disconnected
+
+security: []

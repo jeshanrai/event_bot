@@ -1,0 +1,566 @@
+# Menu Paths
+# This file contains all menu management endpoint definitions
+
+paths:
+  /menu:
+    get:
+      tags:
+        - Menu
+      summary: Get all menu items for the restaurant
+      description: |
+        Retrieves all menu items for the authenticated user's restaurant.
+
+        **Features:**
+        - Optional category filtering
+        - Sorted by category and name
+        - Returns all item details including availability
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: getMenuItems
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter by category
+          example: "Main Course"
+      responses:
+        "200":
+          description: Menu items retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MenuItem"
+              example:
+                - id: 1
+                  restaurant_id: 1
+                  name: "Chicken Burger"
+                  description: "Juicy grilled chicken with fresh vegetables"
+                  price: 250.50
+                  category: "Main Course"
+                  image_url: "https://example.com/burger.jpg"
+                  available: true
+                  created_at: "2024-02-01T10:00:00Z"
+                  updated_at: "2024-02-01T10:00:00Z"
+                - id: 2
+                  restaurant_id: 1
+                  name: "Caesar Salad"
+                  description: "Fresh romaine with Caesar dressing"
+                  price: 180.00
+                  category: "Appetizers"
+                  image_url: "https://example.com/salad.jpg"
+                  available: true
+                  created_at: "2024-02-01T10:00:00Z"
+                  updated_at: "2024-02-01T10:00:00Z"
+        "400":
+          description: Restaurant ID not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Restaurant ID not found for user"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Error fetching menu items"
+
+    post:
+      tags:
+        - Menu
+      summary: Create a new menu item
+      description: |
+        Creates a new menu item for the authenticated user's restaurant.
+
+        **Required Fields:**
+        - name
+        - price
+        - category
+
+        **Optional Fields:**
+        - description
+        - image_url
+        - available (defaults to true)
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: createMenuItem
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMenuItemRequest"
+            examples:
+              complete:
+                summary: Complete menu item
+                value:
+                  name: "Chicken Burger"
+                  description: "Juicy grilled chicken with fresh vegetables"
+                  price: 250.50
+                  category: "Main Course"
+                  image_url: "https://example.com/images/burger.jpg"
+                  available: true
+              minimal:
+                summary: Minimal required fields
+                value:
+                  name: "Caesar Salad"
+                  price: 180.00
+                  category: "Appetizers"
+      responses:
+        "201":
+          description: Menu item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+              example:
+                id: 1
+                restaurant_id: 1
+                name: "Chicken Burger"
+                description: "Juicy grilled chicken with fresh vegetables"
+                price: 250.50
+                category: "Main Course"
+                image_url: "https://example.com/images/burger.jpg"
+                available: true
+                created_at: "2024-02-01T10:00:00Z"
+                updated_at: "2024-02-01T10:00:00Z"
+        "400":
+          $ref: "#/components/responses/InvalidMenuData"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Error creating menu item"
+
+  /menu/categories:
+    get:
+      tags:
+        - Menu
+      summary: Get categories with item counts
+      description: |
+        Retrieves all unique categories for the restaurant with item counts.
+
+        **Returns:**
+        - Category name
+        - Number of items in each category
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: getCategories
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+              example:
+                - name: "Main Course"
+                  count: 15
+                - name: "Appetizers"
+                  count: 8
+                - name: "Desserts"
+                  count: 6
+                - name: "Beverages"
+                  count: 12
+        "400":
+          description: Restaurant ID not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Restaurant ID not found for user"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Error fetching categories"
+
+  /menu/upload:
+    post:
+      tags:
+        - Menu
+      summary: Upload menu items via CSV
+      description: |
+        Bulk upload menu items using a CSV file.
+
+        **CSV Format:**
+        Required columns: name, price, category
+        Optional columns: description, image_url
+
+        **CSV Example:**
+        ```
+        name,price,category,description,image_url
+        Chicken Burger,250.50,Main Course,Juicy grilled chicken,https://example.com/burger.jpg
+        Caesar Salad,180.00,Appetizers,Fresh romaine,https://example.com/salad.jpg
+        ```
+
+        **Process:**
+        1. Upload CSV file
+        2. System validates each row
+        3. Valid items are added to database
+        4. Returns summary of success/errors
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: uploadMenuCsv
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing menu items
+      responses:
+        "200":
+          description: CSV processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsvUploadResponse"
+              example:
+                message: "CSV processing completed"
+                total: 50
+                success: 48
+                errors: 2
+        "400":
+          description: Missing file or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                noFile:
+                  value:
+                    message: "Please upload a CSV file"
+                noRestaurant:
+                  value:
+                    message: "Restaurant ID not found for user"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                parseError:
+                  value:
+                    message: "Error parsing CSV file"
+                processingError:
+                  value:
+                    message: "Error processing CSV data"
+
+  /menu/{id}:
+    get:
+      tags:
+        - Menu
+      summary: Get a single menu item by ID
+      description: |
+        Retrieves details of a specific menu item.
+
+        **Validation:**
+        - Item must exist
+        - Item must belong to user's restaurant
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: getMenuItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Menu item ID
+          example: 1
+      responses:
+        "200":
+          description: Menu item retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+              example:
+                id: 1
+                restaurant_id: 1
+                name: "Chicken Burger"
+                description: "Juicy grilled chicken with fresh vegetables"
+                price: 250.50
+                category: "Main Course"
+                image_url: "https://example.com/images/burger.jpg"
+                available: true
+                created_at: "2024-02-01T10:00:00Z"
+                updated_at: "2024-02-01T10:00:00Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedMenuAccess"
+        "404":
+          $ref: "#/components/responses/MenuItemNotFound"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Error fetching menu item"
+
+    put:
+      tags:
+        - Menu
+      summary: Update an existing menu item
+      description: |
+        Updates an existing menu item. Only provided fields will be updated.
+
+        **Validation:**
+        - Item must exist
+        - Item must belong to user's restaurant
+
+        **All fields are optional** - only send fields you want to update
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: updateMenuItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Menu item ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMenuItemRequest"
+            examples:
+              partialUpdate:
+                summary: Update price only
+                value:
+                  price: 299.50
+              fullUpdate:
+                summary: Update all fields
+                value:
+                  name: "Chicken Burger Deluxe"
+                  description: "Premium grilled chicken with fresh vegetables and special sauce"
+                  price: 299.50
+                  category: "Main Course"
+                  image_url: "https://example.com/images/burger-deluxe.jpg"
+                  available: true
+      responses:
+        "200":
+          description: Menu item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+              example:
+                id: 1
+                restaurant_id: 1
+                name: "Chicken Burger Deluxe"
+                description: "Premium grilled chicken with fresh vegetables and special sauce"
+                price: 299.50
+                category: "Main Course"
+                image_url: "https://example.com/images/burger-deluxe.jpg"
+                available: true
+                created_at: "2024-02-01T10:00:00Z"
+                updated_at: "2024-02-01T12:30:00Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedMenuAccess"
+        "404":
+          $ref: "#/components/responses/MenuItemNotFound"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Error updating menu item"
+
+    delete:
+      tags:
+        - Menu
+      summary: Delete a menu item
+      description: |
+        Permanently deletes a menu item from the database.
+
+        **Validation:**
+        - Item must exist
+        - Item must belong to user's restaurant
+
+        **Warning:** This action cannot be undone!
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: deleteMenuItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Menu item ID
+          example: 1
+      responses:
+        "200":
+          description: Menu item deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteMenuItemResponse"
+              example:
+                message: "Menu item deleted successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedMenuAccess"
+        "404":
+          $ref: "#/components/responses/MenuItemNotFound"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Error deleting menu item"
+
+  /menu/{id}/availability:
+    patch:
+      tags:
+        - Menu
+      summary: Toggle availability of a menu item
+      description: |
+        Updates the availability status of a menu item.
+
+        **Use Cases:**
+        - Mark item as out of stock
+        - Temporarily disable an item
+        - Re-enable a disabled item
+
+        **Validation:**
+        - Item must exist
+        - Item must belong to user's restaurant
+        - Available field must be boolean
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: toggleAvailability
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Menu item ID
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToggleAvailabilityRequest"
+            examples:
+              disable:
+                summary: Mark as unavailable
+                value:
+                  available: false
+              enable:
+                summary: Mark as available
+                value:
+                  available: true
+      responses:
+        "200":
+          description: Availability updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+              example:
+                id: 1
+                restaurant_id: 1
+                name: "Chicken Burger"
+                description: "Juicy grilled chicken with fresh vegetables"
+                price: 250.50
+                category: "Main Course"
+                image_url: "https://example.com/images/burger.jpg"
+                available: false
+                created_at: "2024-02-01T10:00:00Z"
+                updated_at: "2024-02-01T14:30:00Z"
+        "400":
+          $ref: "#/components/responses/InvalidMenuData"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedMenuAccess"
+        "404":
+          $ref: "#/components/responses/MenuItemNotFound"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Error toggling availability"

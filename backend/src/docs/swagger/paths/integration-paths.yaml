@@ -1,0 +1,674 @@
+# Integration Paths
+# This file contains all Facebook and WhatsApp integration endpoint definitions
+
+paths:
+  # ==================== Facebook Integration Endpoints ====================
+  /integrations/facebook/connect:
+    post:
+      tags:
+        - Facebook Integration
+      summary: Connect Facebook Page
+      description: |
+        Connects a Facebook Page to the restaurant for messaging.
+
+        **Process:**
+        1. Validates page credentials
+        2. Saves credentials to database
+        3. Subscribes app to page webhooks
+        4. Generates webhook URL
+
+        **Required:**
+        - Facebook Page ID
+        - Page Access Token (get from Facebook for Developers)
+
+        **Webhook Subscription:**
+        - messages
+        - messaging_postbacks
+        - messaging_optins
+        - message_deliveries
+        - message_reads
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: connectFacebookPage
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectFacebookRequest"
+            example:
+              page_id: "123456789012345"
+              page_name: "John's Restaurant"
+              page_access_token: "EAAxxxxxxxxxxxxxxx"
+      responses:
+        "200":
+          description: Facebook Page connected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectFacebookResponse"
+              example:
+                success: true
+                message: "Facebook Page connected and subscribed successfully"
+                data:
+                  id: 1
+                  page_name: "John's Restaurant"
+                  page_id: "123456789012345"
+                  webhook_url: "https://api.chotkari.com/webhook/facebook/123456789012345"
+                  connected_at: "2024-02-01T10:00:00Z"
+        "400":
+          $ref: "#/components/responses/MissingPageCredentials"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/IntegrationFailed"
+
+  /integrations/facebook/status:
+    get:
+      tags:
+        - Facebook Integration
+      summary: Get Facebook connection status
+      description: |
+        Retrieves the current Facebook Page connection status for the authenticated user.
+
+        **Returns:**
+        - Connection status (connected/not connected)
+        - Page details if connected
+        - Webhook URL
+        - Connection timestamp
+
+        **Note:** Returns the first active connection (backward compatibility)
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: getFacebookStatus
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacebookStatusResponse"
+              examples:
+                connected:
+                  summary: Connected status
+                  value:
+                    success: true
+                    connected: true
+                    data:
+                      id: 1
+                      page_id: "123456789012345"
+                      page_name: "John's Restaurant"
+                      webhook_url: "https://api.chotkari.com/webhook/facebook/123456789012345"
+                      connected_at: "2024-02-01T10:00:00Z"
+                notConnected:
+                  summary: Not connected
+                  value:
+                    success: true
+                    connected: false
+                    message: "Facebook Page not connected"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  /integrations/facebook/pages:
+    get:
+      tags:
+        - Facebook Integration
+      summary: List all Facebook Pages
+      description: |
+        Lists all Facebook Pages connected to the restaurant.
+
+        **Features:**
+        - Multi-page support
+        - Shows active and inactive pages
+        - Ordered by activity status and connection date
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: listFacebookPages
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Pages retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacebookPagesListResponse"
+              example:
+                success: true
+                data:
+                  - id: 1
+                    page_id: "123456789012345"
+                    page_name: "John's Restaurant"
+                    status: "active"
+                    is_active: true
+                    webhook_url: "https://api.chotkari.com/webhook/facebook/123456789012345"
+                    connected_at: "2024-02-01T10:00:00Z"
+                  - id: 2
+                    page_id: "987654321098765"
+                    page_name: "John's Cafe"
+                    status: "inactive"
+                    is_active: false
+                    webhook_url: "https://api.chotkari.com/webhook/facebook/987654321098765"
+                    connected_at: "2024-01-15T10:00:00Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  /integrations/facebook/disconnect:
+    delete:
+      tags:
+        - Facebook Integration
+      summary: Disconnect all Facebook Pages
+      description: |
+        Disconnects all Facebook Pages for the authenticated user.
+
+        **Warning:** This will disconnect ALL pages. To disconnect a specific page, use DELETE /integrations/facebook/pages/{id}
+
+        **Action:**
+        - Deactivates all Facebook connections
+        - Webhook subscriptions remain but won't be processed
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: disconnectFacebookPage
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Facebook Pages disconnected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisconnectResponse"
+              example:
+                success: true
+                message: "Facebook Page disconnected successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/IntegrationNotFound"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  /integrations/facebook/pages/{id}:
+    delete:
+      tags:
+        - Facebook Integration
+      summary: Disconnect specific Facebook Page
+      description: |
+        Disconnects a specific Facebook Page by ID.
+
+        **Validation:**
+        - Page must exist
+        - Page must belong to user's restaurant
+
+        **Action:**
+        - Deactivates the specific Facebook connection
+        - Other pages remain active
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: disconnectFacebookPageById
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Facebook connection ID
+          example: 1
+      responses:
+        "200":
+          description: Facebook page disconnected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisconnectResponse"
+              example:
+                success: true
+                message: "Facebook page disconnected successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Facebook page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+              example:
+                success: false
+                message: "Facebook page not found"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  # ==================== WhatsApp Integration Endpoints ====================
+  /integrations/whatsapp/connect:
+    post:
+      tags:
+        - WhatsApp Integration
+      summary: Connect WhatsApp Business Account
+      description: |
+        Connects WhatsApp Business Account using Facebook's Embedded Signup flow.
+
+        **Process:**
+        1. Exchange short-lived token for long-lived token (60 days)
+        2. Fetch WABA and phone number details
+        3. Save credentials to database
+        4. Generate webhook URL
+
+        **Token Types:**
+        - Short-lived: Received from Facebook signup (1 hour)
+        - Long-lived: Exchanged automatically (60 days)
+
+        **Connection States:**
+        - `active`: Full connection with phone number
+        - `pending_signup`: Token saved, awaiting signup completion
+        - `pending_phone`: WABA connected, phone number pending
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: connectWhatsApp
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectWhatsAppRequest"
+            examples:
+              full:
+                summary: Full connection with all details
+                value:
+                  access_token: "EAAxxxxxxxxxxxxxxx"
+                  waba_id: "987654321098765"
+                  phone_number_id: "123456789012345"
+              tokenOnly:
+                summary: Token only (pending signup)
+                value:
+                  access_token: "EAAxxxxxxxxxxxxxxx"
+              wabaOnly:
+                summary: WABA only (pending phone)
+                value:
+                  access_token: "EAAxxxxxxxxxxxxxxx"
+                  waba_id: "987654321098765"
+      responses:
+        "200":
+          description: WhatsApp connected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectWhatsAppResponse"
+              examples:
+                active:
+                  summary: Active connection
+                  value:
+                    success: true
+                    message: "WhatsApp connected successfully"
+                    data:
+                      id: 1
+                      phone_number: "+1234567890"
+                      quality_rating: "GREEN"
+                      webhook_url: "https://api.chotkari.com/webhook/whatsapp/123456789012345"
+                      connected_at: "2024-02-01T10:00:00Z"
+                pendingSignup:
+                  summary: Pending signup completion
+                  value:
+                    success: true
+                    message: "Token saved. Please complete WhatsApp Business signup to finish setup."
+                    data:
+                      status: "pending_signup"
+                      connected_at: "2024-02-01T10:00:00Z"
+                pendingPhone:
+                  summary: Pending phone number
+                  value:
+                    success: true
+                    message: "WhatsApp Business Account connected. Phone number setup pending."
+                    data:
+                      status: "pending_phone"
+                      waba_id: "987654321098765"
+                      connected_at: "2024-02-01T10:00:00Z"
+        "400":
+          $ref: "#/components/responses/MissingAccessToken"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/IntegrationFailed"
+
+  /integrations/whatsapp/status:
+    get:
+      tags:
+        - WhatsApp Integration
+      summary: Get WhatsApp connection status
+      description: |
+        Retrieves the current WhatsApp connection status for the authenticated user.
+
+        **Returns:**
+        - Connection status (connected/not connected)
+        - Phone number and quality rating
+        - Token expiration status
+        - Webhook URL
+        - Last verification timestamp
+
+        **Expiration Check:**
+        - Automatically checks if token is expired
+        - Returns `is_expired` flag
+
+        **Note:** Returns the first active connection (backward compatibility)
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: getWhatsAppStatus
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppStatusResponse"
+              examples:
+                connected:
+                  summary: Connected and active
+                  value:
+                    success: true
+                    connected: true
+                    data:
+                      id: 1
+                      phone_number: "+1234567890"
+                      quality_rating: "GREEN"
+                      webhook_url: "https://api.chotkari.com/webhook/whatsapp/123456789012345"
+                      connected_at: "2024-02-01T10:00:00Z"
+                      last_verified: "2024-02-01T10:00:00Z"
+                      expires_at: "2024-04-01T10:00:00Z"
+                      is_expired: false
+                notConnected:
+                  summary: Not connected
+                  value:
+                    success: true
+                    connected: false
+                    message: "WhatsApp not connected"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  /integrations/whatsapp/accounts:
+    get:
+      tags:
+        - WhatsApp Integration
+      summary: List all WhatsApp accounts
+      description: |
+        Lists all WhatsApp Business Accounts connected to the restaurant.
+
+        **Features:**
+        - Multi-account support
+        - Shows active and inactive accounts
+        - Automatic expiration checking
+        - Quality rating display
+
+        **Status Values:**
+        - `active`: Connected and valid
+        - `expired`: Token has expired
+        - `pending_signup`: Awaiting signup completion
+        - `pending_phone`: Awaiting phone setup
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: listWhatsAppAccounts
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Accounts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppAccountsListResponse"
+              example:
+                success: true
+                data:
+                  - id: 1
+                    phone_number: "+1234567890"
+                    phone_number_id: "123456789012345"
+                    quality_rating: "GREEN"
+                    status: "active"
+                    is_active: true
+                    webhook_url: "https://api.chotkari.com/webhook/whatsapp/123456789012345"
+                    connected_at: "2024-02-01T10:00:00Z"
+                    expires_at: "2024-04-01T10:00:00Z"
+                  - id: 2
+                    phone_number: "+0987654321"
+                    phone_number_id: "987654321098765"
+                    quality_rating: "YELLOW"
+                    status: "expired"
+                    is_active: false
+                    webhook_url: "https://api.chotkari.com/webhook/whatsapp/987654321098765"
+                    connected_at: "2024-01-01T10:00:00Z"
+                    expires_at: "2024-03-01T10:00:00Z"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  /integrations/whatsapp/disconnect:
+    delete:
+      tags:
+        - WhatsApp Integration
+      summary: Disconnect all WhatsApp accounts
+      description: |
+        Disconnects all WhatsApp Business Accounts for the authenticated user.
+
+        **Warning:** This will disconnect ALL accounts. To disconnect a specific account, use DELETE /integrations/whatsapp/accounts/{id}
+
+        **Action:**
+        - Deactivates all WhatsApp connections
+        - Webhooks remain but won't be processed
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: disconnectWhatsApp
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: WhatsApp disconnected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisconnectResponse"
+              example:
+                success: true
+                message: "WhatsApp disconnected successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/IntegrationNotFound"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  /integrations/whatsapp/accounts/{id}:
+    delete:
+      tags:
+        - WhatsApp Integration
+      summary: Disconnect specific WhatsApp account
+      description: |
+        Disconnects a specific WhatsApp Business Account by ID.
+
+        **Validation:**
+        - Account must exist
+        - Account must belong to user's restaurant
+
+        **Action:**
+        - Deactivates the specific WhatsApp connection
+        - Other accounts remain active
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: disconnectWhatsAppAccount
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: WhatsApp connection ID
+          example: 1
+      responses:
+        "200":
+          description: WhatsApp account disconnected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisconnectResponse"
+              example:
+                success: true
+                message: "WhatsApp account disconnected successfully"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: WhatsApp account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+              example:
+                success: false
+                message: "WhatsApp account not found"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+
+  /integrations/whatsapp/verify:
+    post:
+      tags:
+        - WhatsApp Integration
+      summary: Verify WhatsApp connection
+      description: |
+        Verifies the WhatsApp connection by checking token validity with Facebook API.
+
+        **Process:**
+        1. Retrieves active connection
+        2. Validates token with Facebook Graph API
+        3. Updates last verified timestamp
+        4. Auto-deactivates if token is invalid
+
+        **Use Cases:**
+        - Check if token is still valid
+        - Verify before sending messages
+        - Troubleshoot connection issues
+
+        **Authentication Required:** Yes
+        **Authorization:** restaurant_owner, staff, superadmin
+      operationId: verifyWhatsAppConnection
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Connection verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyConnectionResponse"
+              example:
+                success: true
+                message: "Connection verified successfully"
+                valid: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: No active connection found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+              example:
+                success: false
+                message: "No active WhatsApp connection"
+        "500":
+          description: Token verification failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationErrorResponse"
+              examples:
+                invalidToken:
+                  value:
+                    success: false
+                    message: "Token verification failed"
+                    valid: false
+                    error: "Invalid OAuth access token"
+                networkError:
+                  value:
+                    success: false
+                    message: "Token verification failed"
+                    valid: false
+                    error: "Network error"
