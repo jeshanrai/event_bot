@@ -1373,8 +1373,15 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
     if (id === 'age_verified_yes') {
       await sendMessage(userId, context.platform, "Thank you for confirming. You may now continue using the service. 🥂");
 
+      // Set age as verified and persist to context
+      const verifiedContext = {
+        ...context,
+        age_verified: true,
+        lastAction: 'age_verified'
+      };
+
       // Auto-show menu after verification for better UX
-      return await toolHandlers.show_food_menu({}, userId, context);
+      return await toolHandlers.show_food_menu({}, userId, verifiedContext);
     }
 
     if (id === 'age_verified_no') {
