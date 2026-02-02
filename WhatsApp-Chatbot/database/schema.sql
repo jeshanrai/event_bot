@@ -128,8 +128,11 @@ CREATE TABLE IF NOT EXISTS sessions (
     user_id VARCHAR(50) PRIMARY KEY,
     context JSONB NOT NULL,
     cart JSONB DEFAULT '[]',
+    age_verified BOOLEAN DEFAULT FALSE,
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_sessions_age_verified ON sessions(age_verified);
 
 -- =========================
 -- END OF SCHEMA
