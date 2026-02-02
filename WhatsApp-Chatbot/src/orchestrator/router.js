@@ -1522,6 +1522,23 @@ async function routeIntent({ text, context, userId, interactiveReply, catalogOrd
     return await toolHandlers.show_welcome_message({}, userId, context);
   }
 
+  // Check for age-related text messages (handle before LLM to avoid API errors)
+  const underagePatterns = ['under 18', 'below 18', 'not 18', 'less than 18', 'younger than 18', 'i am a minor', 'i\'m a minor', 'i am minor'];
+  if (underagePatterns.some(pattern => lowerText.includes(pattern))) {
+    await sendMessage(userId, context.platform,
+      "Sorry — this service is only available to users aged 18 or older.\n\nIf you selected this by mistake, type 'menu' to start again.",
+      { businessId: context.businessId }
+    );
+    return {
+      reply: null,
+      updatedContext: {
+        ...context,
+        age_verified: false,
+        lastAction: 'underage_text_response'
+      }
+    };
+  }
+
   // Check for order history keywords
   if (lowerText.includes('order history') || lowerText.includes('my orders') || lowerText.includes('past orders') || lowerText.includes('previous orders')) {
     return await toolHandlers.show_order_history({}, userId, context);
