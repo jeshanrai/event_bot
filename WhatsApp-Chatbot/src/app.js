@@ -92,15 +92,17 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
             { businessId: restaurantId }
           );
 
-          // 3. Clear/Reset User Context
+          // 3. Clear/Reset User Context but PRESERVE age_verified
           // This ensures they don't get stuck in the 'awaiting_payment' stage
+          const existingContext = await getContext(userId);
           await updateContext(userId, {
+            ...existingContext,
             stage: 'order_complete',
             lastAction: 'payment_confirmed_webhook',
             cart: [],
             pendingOrder: null
           });
-          console.log(`🔔 User ${userId} notified and context reset.`);
+          console.log(`🔔 User ${userId} notified and context reset (age_verified preserved).`);
         }
       }
 
@@ -512,7 +514,7 @@ app.post('/api/webview/checkout', async (req, res) => {
         { businessId: context.businessId }
       );
 
-      // Update context and clear session
+      // Update context but PRESERVE age_verified
       await updateContext(userId, {
         ...context,
         cart: [],
@@ -521,7 +523,7 @@ app.post('/api/webview/checkout', async (req, res) => {
         pendingOrder: null
       });
 
-      // Clear session cart
+      // Reset session (preserves age_verified column)
       await restaurantTools.deleteSessionAfterOrder(userId);
 
       return res.json({
