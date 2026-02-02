@@ -102,6 +102,7 @@ const Order = {
   findByDateRange: async (startDate, endDate, status = null) => {
     let query = `
             SELECT o.*, 
+                   LPAD((o.id % 10000)::text, 4, '0') as token,
                    COALESCE(
                        json_agg(
                            json_build_object(
