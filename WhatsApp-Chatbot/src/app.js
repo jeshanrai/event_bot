@@ -79,7 +79,7 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
           `, [orderId]);
 
           const orderItemsText = itemsResult.rows.map(item =>
-            `• ${item.name} x${item.quantity} - Rs. ${(item.price * item.quantity).toFixed(2)}`
+            `• ${item.name} x${item.quantity} - AUD ${(item.price * item.quantity).toFixed(2)}`
           ).join('\n');
 
           const orderTotal = itemsResult.rows.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -88,7 +88,7 @@ app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (re
           await sendMessage(
             userId,
             platform,
-            `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: Rs. ${orderTotal.toFixed(2)}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`,
+            `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: AUD ${orderTotal.toFixed(2)}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`,
             { businessId: restaurantId }
           );
 
@@ -501,14 +501,14 @@ app.post('/api/webview/checkout', async (req, res) => {
 
       // Build order details string
       const orderItemsText = cart.map(item =>
-        `• ${item.name} x${item.quantity} - Rs. ${(item.price * item.quantity).toFixed(2)}`
+        `• ${item.name} x${item.quantity} - AUD ${(item.price * item.quantity).toFixed(2)}`
       ).join('\n');
       const orderTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
       // Send confirmation message to user with order details
       // Pass businessId from context to use correct page token for multi-tenant
       await sendMessage(userId, platform,
-        `✅ Order Confirmed!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: Rs. ${orderTotal.toFixed(2)}\n\nPlease pay cash at the counter.\nShow this number to staff.\n\nThank you for your order! 🙏`,
+        `✅ Order Confirmed!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: AUD ${orderTotal.toFixed(2)}\n\nPlease pay cash at the counter.\nShow this number to staff.\n\nThank you for your order! 🙏`,
         { businessId: context.businessId }
       );
 
