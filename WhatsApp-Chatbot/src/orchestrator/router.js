@@ -8,6 +8,7 @@ import {
   sendOrderConfirmationMessage,
   sendCtaUrlMessage
 } from '../services/response.js';
+import { sendMessengerButtonTemplate } from '../messenger/sendmessage.js';
 import * as restaurantTools from '../tools/restaurant.tools.js';
 
 const toolHandlers = {
@@ -987,15 +988,20 @@ const toolHandlers = {
           { businessId: context.businessId }
         );
       } else {
-        // Messenger can use buttons
-        await sendButtonMessage(
+        // Messenger - use URL button WITHOUT messenger_extensions
+        // Stripe checkout doesn't work in Messenger webview on desktop
+        // Setting messenger_extensions: false makes it open in browser
+        await sendMessengerButtonTemplate(
           userId,
-          context.platform,
-          'Pay Securely',
           'Click below to complete your payment via Stripe',
-          'Stripe Secure Payment',
-          [{ type: 'url', url: paymentLink, title: 'Pay Now 💳' }],
-          { businessId: context.businessId }
+          [{
+            type: 'web_url',
+            title: 'Pay Now 💳',
+            url: paymentLink,
+            webview_height_ratio: 'full',
+            messenger_extensions: false  // Opens in browser, not webview
+          }],
+          { pageId: context.businessId }
         );
       }
 

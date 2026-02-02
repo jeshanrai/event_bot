@@ -457,21 +457,35 @@ async function clearSessionCart(userId) {
 }
 
 /**
- * Delete entire session after order is completed
- * Called after order is successfully placed with payment
+ * Reset session after order is completed
+ * Clears cart and order-related context but PRESERVES age_verified status
  * @param {string} userId - WhatsApp user ID
  * @returns {Promise<void>}
  */
 async function deleteSessionAfterOrder(userId) {
   try {
+    // Instead of deleting, reset the session but preserve age_verified
+    const defaultContext = {
+      stage: 'initial',
+      history: [],
+      payment_method: null,
+      service_type: null,
+      delivery_address: null,
+      pendingOrder: null
+    };
+
     await db.query(
-      `DELETE FROM sessions WHERE user_id = $1`,
-      [userId]
+      `UPDATE sessions 
+       SET cart = '[]', 
+           context = $2,
+           updated_at = NOW()
+       WHERE user_id = $1`,
+      [userId, defaultContext]
     );
-    console.log(`✅ Session deleted for user ${userId} after order completion`);
+    console.log(`✅ Session reset for user ${userId} after order completion (age_verified preserved)`);
   } catch (error) {
-    console.error(`Warning: Could not delete session for user ${userId}:`, error);
-    // Don't fail the order if session deletion fails
+    console.error(`Warning: Could not reset session for user ${userId}:`, error);
+    // Don't fail the order if session reset fails
   }
 }
 
