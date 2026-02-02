@@ -113,7 +113,6 @@ const getOrders = async (req, res) => {
       status,
       startDate,
       endDate,
-      restaurant_id,
       platform,
       service_type,
       payment_verified,
@@ -146,6 +145,11 @@ const getOrders = async (req, res) => {
     let params = [];
     let paramCount = 1;
 
+    // Filter by authenticated user's restaurant_id
+    whereClause.push(`o.restaurant_id = $${paramCount}`);
+    params.push(req.user.restaurant_id);
+    paramCount++;
+
     // Filter by status (can be multiple, comma-separated)
     if (status) {
       const statusArray = status.split(",").map((s) => s.trim());
@@ -166,13 +170,6 @@ const getOrders = async (req, res) => {
     if (endDate) {
       whereClause.push(`o.created_at <= $${paramCount}`);
       params.push(endDate);
-      paramCount++;
-    }
-
-    // Filter by restaurant
-    if (restaurant_id) {
-      whereClause.push(`o.restaurant_id = $${paramCount}`);
-      params.push(restaurant_id);
       paramCount++;
     }
 
@@ -197,8 +194,7 @@ const getOrders = async (req, res) => {
       paramCount++;
     }
 
-    const whereSQL =
-      whereClause.length > 0 ? `WHERE ${whereClause.join(" AND ")}` : "";
+    const whereSQL = `WHERE ${whereClause.join(" AND ")}`;
 
     // Count total matching records
     const countQuery = `
@@ -213,6 +209,7 @@ const getOrders = async (req, res) => {
     // Get paginated orders
     const ordersQuery = `
             SELECT o.*, 
+                   LPAD((o.id % 10000)::text, 4, '0') as token,
                    COALESCE(
                        json_agg(
                            json_build_object(
@@ -257,7 +254,7 @@ const getOrders = async (req, res) => {
         status: status || null,
         startDate: startDate || null,
         endDate: endDate || null,
-        restaurant_id: restaurant_id || null,
+        restaurant_id: req.user.restaurant_id,
         platform: platform || null,
         service_type: service_type || null,
         payment_verified: payment_verified || null,
