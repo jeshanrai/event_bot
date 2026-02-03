@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍽️ Momo House - Chat Test Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            background: #f7f7f7;
+            padding: 15px 20px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .control-group select,
+        .control-group input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .test-btn {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .test-btn:hover {
+            background: #5568d3;
+        }
+
+        .test-btn.danger {
+            background: #e53e3e;
+        }
+
+        .test-btn.danger:hover {
+            background: #c53030;
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border: 2px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .interactive-button {
+            padding: 10px 16px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .interactive-button:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            max-width: 70px;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .input-area input:focus {
+            border-color: #667eea;
+        }
+
+        .input-area button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .input-area button:hover {
+            background: #5568d3;
+        }
+
+        .input-area button:active {
+            transform: scale(0.95);
+        }
+
+        .debug-panel {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px 20px;
+            font-size: 13px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .debug-panel h3 {
+            color: #90cdf4;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .debug-item {
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: #1a202c;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+
+        .debug-label {
+            color: #90cdf4;
+            font-weight: 600;
+        }
+
+        .debug-value {
+            color: #68d391;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.online {
+            background: #48bb78;
+            box-shadow: 0 0 8px #48bb78;
+        }
+
+        .status-indicator.offline {
+            background: #f56565;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🍽️ Momo House - Chat Test Interface</h1>
+            <p><span class="status-indicator online"></span>Connected to Server</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="control-group">
+                <label>Platform:</label>
+                <select id="platformSelect">
+                    <option value="messenger">Messenger</option>
+                    <option value="whatsapp">WhatsApp</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>User ID:</label>
+                <input type="text" id="userIdInput" value="test_user_123" placeholder="Enter test user ID">
+            </div>
+
+            <div class="control-group">
+                <label>Restaurant ID:</label>
+                <select id="restaurantSelect">
+                    <option value="1">Momo House (1)</option>
+                    <option value="2">Restaurant 2</option>
+                    <option value="3">Restaurant 3</option>
+                </select>
+            </div>
+
+            <div class="test-buttons">
+                <button class="test-btn" onclick="sendQuickTest('hello')">👋 Say Hello</button>
+                <button class="test-btn" onclick="sendQuickTest('menu')">📋 Ask for Menu</button>
+                <button class="test-btn" onclick="sendQuickTest('thank you')">🙏 Say Thanks</button>
+                <button class="test-btn danger" onclick="clearChat()">🗑️ Clear Chat</button>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea">
+            <div class="message bot">
+                <div class="message-content">
+                    Welcome to the test interface! Send a message to start chatting.
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <input 
+                type="text" 
+                id="messageInput" 
+                placeholder="Type your message here..."
+                onkeypress="handleKeyPress(event)"
+            >
+            <button onclick="sendMessage()">Send</button>
+        </div>
+
+        <!-- Debug Panel -->
+        <div class="debug-panel" id="debugPanel">
+            <h3>🔍 Debug Info</h3>
+            <div class="debug-item">
+                <span class="debug-label">Stage:</span> 
+                <span class="debug-value" id="debugStage">initial</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Cart Items:</span> 
+                <span class="debug-value" id="debugCart">0</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Age Verified:</span> 
+                <span class="debug-value" id="debugAge">❌</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Last Action:</span> 
+                <span class="debug-value" id="debugAction">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = window.location.origin; // Uses same server
+        let currentContext = {};
+
+        // Send message function
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Display user message
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            showTyping(true);
+
+            // Get current settings
+            const platform = document.getElementById('platformSelect').value;
+            const userId = document.getElementById('userIdInput').value;
+            const restaurantId = document.getElementById('restaurantSelect').value;
+
+            // Prepare webhook payload
+            const webhookPayload = createWebhookPayload(platform, userId, message, restaurantId);
+
+            try {
+                // Send to appropriate webhook endpoint
+                const endpoint = platform === 'messenger' ? '/messenger-webhook' : '/whatsapp-webhook';
+                
+                const response = await fetch(API_BASE_URL + endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(webhookPayload)
+                });
+
+                console.log('Webhook response:', response.status);
+
+                // Wait a bit for processing, then fetch bot response
+                setTimeout(async () => {
+                    await fetchBotResponse(userId, platform);
+                    showTyping(false);
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showTyping(false);
+                addMessage('❌ Error: Could not connect to server. Make sure your server is running.', 'bot');
+            }
+        }
+
+        // Create webhook payload based on platform
+        function createWebhookPayload(platform, userId, message, restaurantId) {
+            if (platform === 'messenger') {
+                return {
+                    object: 'page',
+                    entry: [{
+                        id: restaurantId || '1',
+                        time: Date.now(),
+                        messaging: [{
+                            sender: { id: userId },
+                            recipient: { id: restaurantId || '1' },
+                            timestamp: Date.now(),
+                            message: {
+                                mid: 'mid.' + Date.now(),
+                                text: message
+                            }
+                        }]
+                    }]
+                };
+            } else {
+                // WhatsApp format
+                return {
+                    object: 'whatsapp_business_account',
+                    entry: [{
+                        id: 'WHATSAPP_BUSINESS_ACCOUNT_ID',
+                        changes: [{
+                            value: {
+                                messaging_product: 'whatsapp',
+                                metadata: {
+                                    display_phone_number: '1234567890',
+                                    phone_number_id: restaurantId || '1'
+                                },
+                                contacts: [{
+                                    profile: {
+                                        name: 'Test User'
+                                    },
+                                    wa_id: userId
+                                }],
+                                messages: [{
+                                    from: userId,
+                                    id: 'wamid.' + Date.now(),
+                                    timestamp: Date.now(),
+                                    type: 'text',
+                                    text: {
+                                        body: message
+                                    }
+                                }]
+                            },
+                            field: 'messages'
+                        }]
+                    }]
+                };
+            }
+        }
+
+        // Fetch bot response (simulated - in real scenario, you'd need SSE or polling)
+        async function fetchBotResponse(userId, platform) {
+            // This is a simplified version
+            // In production, you might want to implement Server-Sent Events (SSE)
+            // or polling to get the actual bot response
+            
+            // For now, we'll show a placeholder
+            // You can enhance this by actually fetching from a response endpoint
+            
+            console.log('Waiting for bot response...');
+            // The actual response will come through your webhook handlers
+            // and will be sent via WhatsApp/Messenger APIs
+            
+            // For testing, you can add mock responses or check server logs
+        }
+
+        // Simulate button click
+        function simulateButtonClick(buttonId, buttonTitle) {
+            const userId = document.getElementById('userIdInput').value;
+            const platform = document.getElementById('platformSelect').value;
+            const restaurantId = document.getElementById('restaurantSelect').value;
+
+            addMessage(`[Clicked: ${buttonTitle}]`, 'user');
+            showTyping(true);
+
+            // Create interactive reply payload
+            const webhookPayload = createInteractivePayload(platform, userId, buttonId, buttonTitle, restaurantId);
+
+            fetch(API_BASE_URL + (platform === 'messenger' ? '/messenger-webhook' : '/whatsapp-webhook'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(webhookPayload)
+            }).then(() => {
+                setTimeout(() => showTyping(false), 1500);
+            }).catch(error => {
+                console.error('Error:', error);
+                showTyping(false);
+            });
+        }
+
+        // Create interactive payload
+        function createInteractivePayload(platform, userId, buttonId, buttonTitle, restaurantId) {
+            if (platform === 'messenger') {
+                return {
+                    object: 'page',
+                    entry: [{
+                        id: restaurantId || '1',
+                        time: Date.now(),
+                        messaging: [{
+                            sender: { id: userId },
+                            recipient: { id: restaurantId || '1' },
+                            timestamp: Date.now(),
+                            postback: {
+                                title: buttonTitle,
+                                payload: buttonId
+                            }
+                        }]
+                    }]
+                };
+            } else {
+                return {
+                    object: 'whatsapp_business_account',
+                    entry: [{
+                        id: 'WHATSAPP_BUSINESS_ACCOUNT_ID',
+                        changes: [{
+                            value: {
+                                messaging_product: 'whatsapp',
+                                metadata: {
+                                    phone_number_id: restaurantId || '1'
+                                },
+                                contacts: [{
+                                    profile: { name: 'Test User' },
+                                    wa_id: userId
+                                }],
+                                messages: [{
+                                    from: userId,
+                                    id: 'wamid.' + Date.now(),
+                                    timestamp: Date.now(),
+                                    type: 'interactive',
+                                    interactive: {
+                                        type: 'button_reply',
+                                        button_reply: {
+                                            id: buttonId,
+                                            title: buttonTitle
+                                        }
+                                    }
+                                }]
+                            }
+                        }]
+                    }]
+                };
+            }
+        }
+
+        // Add message to chat
+        function addMessage(text, sender) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = text;
+            
+            messageDiv.appendChild(contentDiv);
+            chatArea.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // Add message with buttons
+        function addMessageWithButtons(text, buttons) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = text;
+            
+            if (buttons && buttons.length > 0) {
+                const buttonGroup = document.createElement('div');
+                buttonGroup.className = 'button-group';
+                
+                buttons.forEach(btn => {
+                    const button = document.createElement('button');
+                    button.className = 'interactive-button';
+                    button.textContent = btn.title;
+                    button.onclick = () => simulateButtonClick(btn.id, btn.title);
+                    buttonGroup.appendChild(button);
+                });
+                
+                contentDiv.appendChild(buttonGroup);
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // Show/hide typing indicator
+        function showTyping(show) {
+            const indicator = document.getElementById('typingIndicator');
+            if (show) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        }
+
+        // Handle Enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Quick test messages
+        function sendQuickTest(message) {
+            document.getElementById('messageInput').value = message;
+            sendMessage();
+        }
+
+        // Clear chat
+        function clearChat() {
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = '<div class="message bot"><div class="message-content">Chat cleared. Ready for a new conversation!</div></div>';
+            
+            // Reset debug info
+            updateDebugInfo({
+                stage: 'initial',
+                cart: [],
+                age_verified: false,
+                lastAction: '-'
+            });
+        }
+
+        // Update debug panel
+        function updateDebugInfo(context) {
+            currentContext = context;
+            
+            document.getElementById('debugStage').textContent = context.stage || 'initial';
+            document.getElementById('debugCart').textContent = (context.cart?.length || 0) + ' items';
+            document.getElementById('debugAge').textContent = context.age_verified ? '✅' : '❌';
+            document.getElementById('debugAction').textContent = context.lastAction || '-';
+        }
+
+        // Test: Simulate age verification response
+        function testAgeVerification() {
+            addMessageWithButtons(
+                '🔞 Age Verification Required\n\nThis service includes age-restricted content and products (alcohol).\n\nAre you 18 years old or above?',
+                [
+                    { id: 'age_verified_yes', title: '✅ I am 18+' },
+                    { id: 'age_verified_no', title: '❌ I am under 18' }
+                ]
+            );
+        }
+
+        // Initialize
+        console.log('Chat test interface ready!');
+        console.log('Server URL:', API_BASE_URL);
+        
+        // Add some helper buttons for testing specific scenarios
+        setTimeout(() => {
+            console.log('You can test the following scenarios:');
+            console.log('1. Type "hello" to start');
+            console.log('2. Type "menu" to see the menu');
+            console.log('3. Type "thank you" after completing an order');
+        }, 1000);
+    </script>
+</body>
+</html>
