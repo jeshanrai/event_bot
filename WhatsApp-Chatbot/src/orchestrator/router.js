@@ -11,6 +11,10 @@ import {
 import { sendMessengerButtonTemplate } from "../messenger/sendmessage.js";
 import * as restaurantTools from "../tools/restaurant.tools.js";
 
+import {
+  sendOrderConfirmationWithTime,
+  sendThankYouMessage,
+} from "../services/orderNotifications.js";
 const toolHandlers = {
   // Step 1: Show food menu (DYNAMIC: Catalog or List)
   show_food_menu: async (args, userId, context) => {
@@ -1661,12 +1665,20 @@ async function routeIntent({
         "Sorry — this service is only available to users aged 18 or older.\n\nYou won’t be able to continue further. If this was selected by mistake, please restart the chat.",
       );
 
+      await sendThankYouMessage(
+        userId,
+        context.platform,
+        context.businessId,
+        "underage",
+      );
+
       return {
         reply: null,
         updatedContext: {
           ...context,
           age_verified: false,
           lastAction: "age_denied",
+          conversationEnded: true,
         },
       };
     }
