@@ -1,99 +1,595 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import useAuth from '../hooks/useAuth';
-import OrdersSidebar from '../components/StaffDashboard/OrdersSidebar';
-import OrderDetailsPanel from '../components/StaffDashboard/OrderDetailsPanel';
-import { useOrders } from '../components/StaffDashboard/hooks/useOrders';
-import { filterOrders } from '../components/StaffDashboard/utils/orderUtils';
-import ConfirmationModal from '../components/common/ConfirmationModal';
-import './StaffDashboard.css';
+import { LogOut } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
+import { useOrders } from "../components/StaffDashboard/hooks/useOrders";
+import ConfirmationModal from "../components/common/ConfirmationModal";
+import "./StaffDashboard.css";
+import "./priority-styles.css";
 
 const StaffDashboard = () => {
-    const { user, logout, loading } = useAuth();
-    const navigate = useNavigate();
-    const [activeFilter, setActiveFilter] = useState('all');
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const { user, logout, loading } = useAuth();
+  const navigate = useNavigate();
 
-    const openLogoutModal = () => setIsLogoutModalOpen(true);
-    const closeLogoutModal = () => setIsLogoutModalOpen(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-    const handleLogoutConfirm = () => {
-        closeLogoutModal();
-        logout();
-    };
+  // New UI states
+  const [searchToken, setSearchToken] = useState("");
+  const [popupOrder, setPopupOrder] = useState(null);
+  const [highlightToken, setHighlightToken] = useState(null);
+  const [showDeliveredCol, setShowDeliveredCol] = useState(true);
+  const [loadingId, setLoadingId] = useState(null);
 
-    const {
-        orders,
-        selectedOrder,
-        isLoading,
-        isRefreshing, // Kept for logic, though button moved
-        unreadCount, // Kept for logic
-        fetchOrders,
-        updateOrderStatus,
-        setSelectedOrder
-    } = useOrders();
+  const openLogoutModal = () => setIsLogoutModalOpen(true);
+  const closeLogoutModal = () => setIsLogoutModalOpen(false);
 
-    useEffect(() => {
-        if (!loading && !user) {
-            navigate('/login');
-        }
-        if (user && user.role !== 'staff' && user.role !== 'superadmin' && user.role !== 'restaurant_owner') {
-            navigate('/');
-        }
-    }, [user, loading, navigate]);
+  const handleLogoutConfirm = () => {
+    closeLogoutModal();
+    logout();
+  };
 
-    const filteredOrders = filterOrders(orders, activeFilter);
+  const {
+    orders,
+    confirmedOrders,
+    preparingOrders,
+    readyOrders,
+    deliveredOrders,
+    isLoading,
+    fetchOrders,
+    updateOrderStatus,
+  } = useOrders();
 
-    const toggleSidebar = () => {
-        setIsSidebarOpen(!isSidebarOpen);
-    };
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
-    if (loading) return <div className="loading-screen">Loading...</div>;
+  // Auth guard
+  useEffect(() => {
+    if (!loading && !user) navigate("/login");
 
-    return (
-        <div className="modern-staff-dashboard">
-            <div className={`dashboard-layout ${!isSidebarOpen ? 'sidebar-hidden' : ''}`}>
-                {/* Sidebar now contains the "Task list" title header */}
-                {isSidebarOpen && (
-                    <OrdersSidebar
-                        orders={filteredOrders}
-                        allOrders={orders}
-                        selectedOrder={selectedOrder}
-                        activeFilter={activeFilter}
-                        isLoading={isLoading}
-                        onSelectOrder={setSelectedOrder}
-                        onFilterChange={setActiveFilter}
-                        onRefresh={fetchOrders}
-                        onLogout={openLogoutModal}
-                        onToggleSidebar={toggleSidebar}
-                    />
-                )}
+    if (
+      user &&
+      user.role !== "staff" &&
+      user.role !== "superadmin" &&
+      user.role !== "restaurant_owner"
+    ) {
+      navigate("/");
+    }
+  }, [user, loading, navigate]);
 
-                <main className="order-details-main">
-                    <OrderDetailsPanel
-                        order={selectedOrder}
-                        user={user}
-                        onStatusUpdate={updateOrderStatus}
-                        onLogout={openLogoutModal}
-                        onToggleSidebar={toggleSidebar}
-                        isSidebarOpen={isSidebarOpen}
-                    />
-                </main>
+  // Auto-close popup after 5s
+  useEffect(() => {
+    if (!popupOrder) return;
+    const timer = setTimeout(() => setPopupOrder(null), 5000);
+    return () => clearTimeout(timer);
+  }, [popupOrder]);
 
-                <ConfirmationModal
-                    isOpen={isLogoutModalOpen}
-                    onClose={closeLogoutModal}
-                    onConfirm={handleLogoutConfirm}
-                    title="Confirm Logout"
-                    message="Are you sure you want to log out?"
-                    confirmText="Logout"
-                    isDestructive={true}
-                />
-            </div>
-        </div>
+  // Split orders by status and SORT by creation time (oldest first)
+  const confirmed = useMemo(
+    () =>
+      orders
+        .filter((o) => o.status === "confirmed")
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)),
+    [orders],
+  );
+
+  const preparing = useMemo(
+    () =>
+      orders
+        .filter((o) => o.status === "preparing")
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)),
+    [orders],
+  );
+
+  const ready = useMemo(
+    () =>
+      orders
+        .filter((o) => o.status === "ready")
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)),
+    [orders],
+  );
+
+  const delivered = useMemo(
+    () =>
+      orders
+        .filter((o) => o.status === "delivered")
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)), // Newest first for delivered
+    [orders],
+  );
+
+  const counts = useMemo(
+    () => ({
+      confirmed: (confirmedOrders.data || []).length,
+      preparing: (preparingOrders.data || []).length,
+      ready: (readyOrders.data || []).length,
+      delivered: (deliveredOrders.data || []).length,
+    }),
+    [
+      confirmedOrders.data,
+      preparingOrders.data,
+      readyOrders.data,
+      deliveredOrders.data,
+    ],
+  );
+
+  // Total helper
+  const calcTotal = (order) => {
+    if (typeof order?.totalAmount === "number") return order.totalAmount;
+    const items = order?.items || [];
+    return items.reduce(
+      (sum, it) => sum + (it.quantity || it.qty || 0) * (it.unit_price || 0),
+      0,
     );
+  };
+
+  // Check if order is high priority (first or second)
+  const isPriority = (index) => index === 0 || index === 1;
+
+  // Get priority level for styling
+  const getPriorityClass = (index) => {
+    if (index === 0) return "sd-priority-1"; // Highest priority
+    if (index === 1) return "sd-priority-2"; // Second priority
+    return "";
+  };
+
+  // Status change
+  const changeStatus = async (id, newStatus) => {
+    setLoadingId(id);
+    await updateOrderStatus(id, newStatus);
+    setPopupOrder(null);
+    setLoadingId(null);
+  };
+
+  // Search: open popup
+  const handleSearch = () => {
+    const token = Number(searchToken);
+    if (!token) return;
+
+    const found = orders.find((o) => Number(o.token) === token);
+    console.log("Search for token", token, "found:", found);
+    if (!found) {
+      alert("Order not found");
+      return;
+    }
+
+    setHighlightToken(token);
+    setPopupOrder(found);
+  };
+
+  // Open popup from card click
+  const openPopup = (order) => {
+    setHighlightToken(order.token);
+    setPopupOrder(order);
+  };
+
+  if (loading) return <div className="loading-screen">Loading...</div>;
+
+  return (
+    <div className="modern-staff-dashboard">
+      <div className="dashboard-layout sidebar-hidden">
+        <main className="order-details-main">
+          <div className="sd-header">
+            <button
+              className="logout"
+              onClick={openLogoutModal}
+              aria-label="Logout"
+            >
+              Logout
+              <LogOut />
+            </button>
+          </div>
+
+          {/* Top row: summary pills + search */}
+          <div className="sd-top-row">
+            <div className="sd-pill-row">
+              <div className="sd-pill sd-pill-created">
+                <span className="sd-pill-count">{counts.confirmed}</span>
+                <span className="sd-pill-label">New Orders</span>
+              </div>
+              <div className="sd-pill sd-pill-confirmed">
+                <span className="sd-pill-count">{counts.preparing}</span>
+                <span className="sd-pill-label">Preparing</span>
+              </div>
+              <div className="sd-pill sd-pill-ready">
+                <span className="sd-pill-count">{counts.ready}</span>
+                <span className="sd-pill-label">Ready</span>
+              </div>
+              <div className="sd-pill sd-pill-delivered">
+                <span className="sd-pill-count">{counts.delivered}</span>
+                <span className="sd-pill-label">Delivered</span>
+                <button
+                  className="sd-eye-btn"
+                  title={
+                    showDeliveredCol
+                      ? "Hide delivered column"
+                      : "Show delivered column"
+                  }
+                  onClick={() => setShowDeliveredCol((v) => !v)}
+                >
+                  {showDeliveredCol ? "👁‍🗨" : "👁"}
+                </button>
+              </div>
+            </div>
+
+            <div className="sd-search">
+              <input
+                className="sd-search-input"
+                type="number"
+                placeholder="Token ID"
+                value={searchToken}
+                onChange={(e) => setSearchToken(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+              <button className="sd-search-btn" onClick={handleSearch}>
+                Search
+              </button>
+            </div>
+          </div>
+
+          {/* {isLoading && <div className="sd-loading-bar">Loading orders…</div>} */}
+
+          {/* New Orders Section (Horizontal Scroll) */}
+          <div className="sd-board sd-board-compact">
+            <section className="sd-col-new sd-col-compact">
+              <div className="sd-col-head">
+                <span>New Orders</span>
+                <span className="sd-col-badge">{counts.confirmed}</span>
+              </div>
+
+              <div className="sd-col-scroll-horizontal">
+                <div className="sd-grid-horizontal" title="Click to Accept">
+                  {(confirmedOrders.data || []).map((o, index) => (
+                    <div
+                      key={o.token}
+                      className={`sd-card sd-card-confirmed sd-card-small ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        changeStatus(o.id, "preparing");
+                      }}
+                    >
+                      {/* Priority Badge */}
+                      {isPriority(index) && (
+                        <div className="sd-priority-badge">
+                          {index === 0 ? "🔥 URGENT" : "⚡ NEXT"}
+                        </div>
+                      )}
+
+                      <div className="sd-card-title">Token #{o.token}</div>
+
+                      <div className="sd-card-foot">
+                        <span className="sd-total">
+                          ${calcTotal(o).toFixed(2)}
+                        </span>
+                        <span className="sd-pay">
+                          {o.payment_method === "cash" ? "Cash" : "Online"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {counts.confirmed === 0 && (
+                    <div className="sd-empty">No new orders</div>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Main Board Columns */}
+          <div
+            className={`sd-board ${showDeliveredCol ? "sd-board-3" : "sd-board-2"}`}
+          >
+            {/* Confirmed Column */}
+            <section className="sd-col">
+              <div className="sd-col-head">
+                <span>Preparing</span>
+                <span className="sd-col-badge">{counts.preparing}</span>
+              </div>
+
+              <div className="sd-col-scroll">
+                <div className="sd-grid">
+                  {(preparingOrders.data || []).map((o, index) => (
+                    <div
+                      key={o.token}
+                      className={`sd-card sd-card-confirmed ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
+                      onClick={() => openPopup(o)}
+                    >
+                      {/* Priority Badge */}
+                      {isPriority(index) && (
+                        <div className="sd-priority-badge">
+                          {index === 0 ? "🔥 #1" : "⚡ #2"}
+                        </div>
+                      )}
+
+                      <div className="sd-card-title">Token #{o.token}</div>
+
+                      <div className="sd-card-items">
+                        {(o.items || []).map((it, idx) => (
+                          <div className="sd-item" key={idx}>
+                            <span>{it.food_name}</span>
+                            <span>×{it.qty ?? it.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="sd-card-foot">
+                        <span className="sd-total">
+                          ${calcTotal(o).toFixed(2)}
+                        </span>
+                        <span className="sd-pay">
+                          {o.payment_method === "cash" ? "Cash" : "Online"}
+                        </span>
+                      </div>
+
+                      <div className="sd-card-actions">
+                        <button
+                          className="sd-btn sd-btn-confirmed sd-btn-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            changeStatus(o.id, "ready");
+                          }}
+                          disabled={isLoading && loadingId === o.id}
+                        >
+                          {isLoading && loadingId === o.id ? (
+                            <>
+                              <span className="spinner"></span> Processing...
+                            </>
+                          ) : (
+                            "Ready"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {counts.preparing === 0 && (
+                    <div className="sd-empty">No orders</div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Ready Column */}
+            <section className="sd-col">
+              <div className="sd-col-head">
+                <span>Ready</span>
+                <span className="sd-col-badge">{counts.ready}</span>
+              </div>
+
+              <div className="sd-col-scroll">
+                <div className="sd-grid">
+                  {(readyOrders.data || []).map((o, index) => (
+                    <div
+                      key={o.token}
+                      className={`sd-card sd-card-ready ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
+                      onClick={() => openPopup(o)}
+                    >
+                      {/* Priority Badge */}
+                      {isPriority(index) && (
+                        <div className="sd-priority-badge sd-priority-badge-ready">
+                          {index === 0 ? "🔥 #1" : "⚡ #2"}
+                        </div>
+                      )}
+
+                      <div className="sd-card-title">Token #{o.token}</div>
+
+                      <div className="sd-card-items">
+                        {(o.items || []).map((it, idx) => (
+                          <div className="sd-item" key={idx}>
+                            <span>{it.food_name}</span>
+                            <span>×{it.qty ?? it.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="sd-card-foot">
+                        <span className="sd-total">
+                          ${calcTotal(o).toFixed(2)}
+                        </span>
+                        <span className="sd-pay">
+                          {o.payment_method === "cash" ? "Cash" : "Online"}
+                        </span>
+                      </div>
+
+                      <div className="sd-card-actions">
+                        <button
+                          className="sd-btn sd-btn-ready sd-btn-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            changeStatus(o.id, "delivered");
+                          }}
+                          disabled={isLoading && loadingId === o.id}
+                        >
+                          {isLoading && loadingId === o.id ? (
+                            <>
+                              <span className="spinner"></span> Processing...
+                            </>
+                          ) : (
+                            "Deliver"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {counts.ready === 0 && (
+                    <div className="sd-empty">No orders</div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Delivered Column */}
+            {showDeliveredCol && (
+              <section className="sd-col">
+                <div className="sd-col-head">
+                  <span>Delivered</span>
+                  <span className="sd-col-badge">{counts.delivered}</span>
+                </div>
+
+                <div className="sd-col-scroll">
+                  <div className="sd-grid">
+                    {(deliveredOrders.data || []).map((o, index) => (
+                      <div
+                        key={o.token}
+                        className={`sd-card sd-card-delivered ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
+                        onClick={() => openPopup(o)}
+                      >
+                        {/* Priority Badge */}
+                        {isPriority(index) && (
+                          <div className="sd-priority-badge sd-priority-badge-delivered">
+                            {index === 0 ? "🔥 #1" : "⚡ #2"}
+                          </div>
+                        )}
+                        <div className="sd-card-title">Token #{o.token}</div>
+
+                        <div className="sd-card-items">
+                          {(o.items || []).map((it, idx) => (
+                            <div className="sd-item" key={idx}>
+                              <span>{it.food_name}</span>
+                              <span>×{it.qty ?? it.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="sd-card-foot">
+                          <span className="sd-total">
+                            ${calcTotal(o).toFixed(2)}
+                          </span>
+                          <span className="sd-pay">
+                            {o.payment_method === "cash" ? "Cash" : "Online"}
+                          </span>
+                        </div>
+                        <div className="sd-card-actions">
+                          <button
+                            className="sd-btn sd-btn-ghost sd-btn-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              changeStatus(o.id, "confirmed");
+                            }}
+                            disabled={isLoading && loadingId === o.id}
+                          >
+                            {isLoading && loadingId === o.id ? (
+                              <>
+                                <span className="spinner"></span> Processing...
+                              </>
+                            ) : (
+                              "Remove"
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {counts.delivered === 0 && (
+                      <div className="sd-empty">No orders</div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* Popup Modal */}
+          {popupOrder && (
+            <div
+              className="sd-popup-backdrop"
+              onMouseDown={(e) => {
+                if (e.target.classList.contains("sd-popup-backdrop")) {
+                  setPopupOrder(null);
+                }
+              }}
+            >
+              <div className="sd-popup">
+                <div className="sd-pop-head">
+                  <div>
+                    <div className="sd-pop-title">
+                      Token #{popupOrder.token}
+                    </div>
+                    <div className="sd-pop-sub">
+                      Payment:{" "}
+                      <b>
+                        {popupOrder.payment_method === "cash"
+                          ? "Cash"
+                          : popupOrder.payment_method === "online"
+                            ? "Online"
+                            : "N/A"}
+                      </b>
+                    </div>
+                  </div>
+                  <span className={`sd-pop-status sd-pop-${popupOrder.status}`}>
+                    {popupOrder.status.toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="sd-pop-body">
+                  <div className="sd-pop-row">
+                    <span>Total</span>
+                    <span className="sd-pop-total">
+                      ${calcTotal(popupOrder).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="sd-pop-items-title">Items</div>
+                  {(popupOrder.items || []).map((it, idx) => (
+                    <div className="sd-pop-item" key={idx}>
+                      <span>{it.food_name}</span>
+                      <span>
+                        ×{it.qty ?? it.quantity} ($
+                        {(
+                          (it.qty ?? it.quantity) * (it.unit_price || 0)
+                        ).toFixed(2)}
+                        )
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="sd-pop-foot">
+                  {popupOrder.status === "preparing" && (
+                    <button
+                      className="sd-btn sd-btn-confirmed sd-btn-full"
+                      onClick={() => changeStatus(popupOrder.id, "ready")}
+                    >
+                      Ready
+                    </button>
+                  )}
+
+                  {popupOrder.status === "ready" && (
+                    <button
+                      className="sd-btn sd-btn-ready sd-btn-full"
+                      onClick={() => changeStatus(popupOrder.id, "delivered")}
+                    >
+                      Deliver
+                    </button>
+                  )}
+
+                  {popupOrder.status === "delivered" && (
+                    <button
+                      className="sd-btn sd-btn-ghost sd-btn-full"
+                      onClick={() => setPopupOrder(null)}
+                    >
+                      Close
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+
+        <ConfirmationModal
+          isOpen={isLogoutModalOpen}
+          onClose={closeLogoutModal}
+          onConfirm={handleLogoutConfirm}
+          title="Confirm Logout"
+          message="Are you sure you want to log out?"
+          confirmText="Logout"
+          isDestructive={true}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default StaffDashboard;
-

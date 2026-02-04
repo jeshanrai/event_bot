@@ -6,91 +6,92 @@ import api from "../../../services/api";
  */
 export const useOrders = () => {
   const [orders, setOrders] = useState([]);
+  const [confirmedOrders, setConfirmedOrders] = useState([]);
+  const [preparingOrders, setPreparingOrders] = useState([]);
+  const [readyOrders, setReadyOrders] = useState([]);
+  const [deliveredOrders, setDeliveredOrders] = useState([]);
+
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchOrders = useCallback(
-    async (showRefreshIndicator = false) => {
+    async (status = "all", showRefreshIndicator = false) => {
       if (showRefreshIndicator) setIsRefreshing(true);
 
       try {
-        const { data } = await api.get("/orders/pending");
-        // const { data } = await api.get("/orders?status=${status}"); --- IGNORE ---
-
-        const newOrdersCount = data.filter(
-          (order) => order.status === "pending",
-        ).length;
-        setUnreadCount(newOrdersCount);
-
-        setOrders(data);
-
-        if (!selectedOrder && data.length > 0) {
-          setSelectedOrder(data[0]);
+        if (status === "all") {
+          const [confirmedRes, preparingRes, readyRes, deliveredRes] =
+            await Promise.all([
+              api.get(`/orders?status=confirmed`),
+              api.get(`/orders?status=preparing`),
+              api.get(`/orders?status=ready`),
+              api.get(`/orders?status=delivered`),
+            ]);
+          setConfirmedOrders(confirmedRes.data);
+          setPreparingOrders(preparingRes.data);
+          setReadyOrders(readyRes.data);
+          setDeliveredOrders(deliveredRes.data);
+          setOrders([
+            ...confirmedRes.data.data,
+            ...preparingRes.data.data,
+            ...readyRes.data.data,
+            ...deliveredRes.data.data,
+          ]);
+        } else {
+          const res = await api.get(`/orders?status=${status}`);
+          if (status === "confirmed") setConfirmedOrders(res.data);
+          if (status === "preparing") setPreparingOrders(res.data);
+          if (status === "ready") setReadyOrders(res.data);
+          if (status === "delivered") setDeliveredOrders(res.data);
         }
       } catch (error) {
-        console.error("Failed to fetch pending orders:", error);
+        console.error("Failed to fetch orders:", error);
       } finally {
         setIsLoading(false);
+
         if (showRefreshIndicator) {
           setTimeout(() => setIsRefreshing(false), 500);
         }
       }
     },
-    [selectedOrder],
+    [],
   );
 
   const updateOrderStatus = async (orderId, newStatus) => {
-    // Optimistic update
-    const previousOrders = [...orders];
-    const previousSelected = selectedOrder;
-
-    // Update local state immediately
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order,
-      ),
-    );
-
-    if (selectedOrder?.id === orderId) {
-      setSelectedOrder((prev) => ({ ...prev, status: newStatus }));
-    }
+    // debugger;
+    setIsLoading(true);
 
     try {
       await api.patch(`/orders/${orderId}/status`, { status: newStatus });
-      // We can still fetch in background to ensure consistency,
-      // but the user sees the change instantly.
-      fetchOrders();
 
-      if (
-        selectedOrder?.id === orderId &&
-        ["delivered", "cancelled"].includes(newStatus)
-      ) {
-        // Logic for removing/changing selection if needed
-        // For now, let's keep it visible or handle as before
-      }
+      setIsLoading(false);
+      fetchOrders();
     } catch (error) {
       console.error("Failed to update order status:", error);
       // Revert changes
-      setOrders(previousOrders);
-      setSelectedOrder(previousSelected);
+      setIsLoading(false);
       throw error;
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(() => fetchOrders(), 10000);
+    const interval = setInterval(async () => {
+      const res = await api.get(`/orders?status=confirmed`);
+      setConfirmedOrders(res.data);
+    }, 10000);
     return () => clearInterval(interval);
-  }, [fetchOrders]);
-
+  }, [confirmedOrders]);
   return {
     orders,
+    confirmedOrders,
+    preparingOrders,
+    readyOrders,
+    deliveredOrders,
     selectedOrder,
     isLoading,
     isRefreshing,
-    unreadCount,
+
     fetchOrders,
     updateOrderStatus,
     setSelectedOrder,
