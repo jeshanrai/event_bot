@@ -6,6 +6,7 @@ import { useOrders } from "../components/StaffDashboard/hooks/useOrders";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import "./StaffDashboard.css";
 import "./priority-styles.css";
+import { notifyError, notifyLoading, notifySuccess } from "../components/StaffDashboard/utils/notify";
 
 const StaffDashboard = () => {
   const { user, logout, loading } = useAuth();
@@ -23,11 +24,15 @@ const StaffDashboard = () => {
   const openLogoutModal = () => setIsLogoutModalOpen(true);
   const closeLogoutModal = () => setIsLogoutModalOpen(false);
 
-  const handleLogoutConfirm = () => {
-    closeLogoutModal();
-    logout();
+  const handleLogoutConfirm = async () => {
+    try {
+      await logout();
+      notifySuccess("Logged out successfully");
+      navigate("/login");
+    } catch {
+      notifyError("Logout failed");
+    }
   };
-
   const {
     orders,
     confirmedOrders,
@@ -44,18 +49,27 @@ const StaffDashboard = () => {
   }, []);
 
   // Auth guard
-  useEffect(() => {
-    if (!loading && !user) navigate("/login");
+  
 
-    if (
-      user &&
-      user.role !== "staff" &&
-      user.role !== "superadmin" &&
-      user.role !== "restaurant_owner"
-    ) {
-      navigate("/");
-    }
-  }, [user, loading, navigate]);
+  //   useEffect(() => {
+  //   if (loading) return; // Wait until loading is complete
+
+  //   if (!user) {
+  //     // User is not logged in - redirect to login
+  //     navigate("/login");
+  //   } else {
+  //     // Check user roles for authorized access
+  //     const authorizedRoles = ["staff", "superadmin", "restaurant_owner"];
+
+  //     if (authorizedRoles.includes(user.role)) {
+  //       // User is logged in and has authorized role - redirect to dashboard
+  //       navigate("/dashboard");
+  //     } else {
+  //       // User is logged in but doesn't have authorized role - redirect to home
+  //       navigate("/");
+  //     }
+  //   }
+  // }, [user, loading, navigate]);
 
   // Auto-close popup after 5s
   useEffect(() => {
@@ -99,16 +113,16 @@ const StaffDashboard = () => {
 
   const counts = useMemo(
     () => ({
-      confirmed: (confirmedOrders.data || []).length,
-      preparing: (preparingOrders.data || []).length,
-      ready: (readyOrders.data || []).length,
-      delivered: (deliveredOrders.data || []).length,
+      confirmed: (confirmedOrders || []).length,
+      preparing: (preparingOrders || []).length,
+      ready: (readyOrders || []).length,
+      delivered: (deliveredOrders || []).length,
     }),
     [
-      confirmedOrders.data,
-      preparingOrders.data,
-      readyOrders.data,
-      deliveredOrders.data,
+      confirmedOrders,
+      preparingOrders,
+      readyOrders,
+      deliveredOrders,
     ],
   );
 
@@ -133,22 +147,46 @@ const StaffDashboard = () => {
   };
 
   // Status change
-  const changeStatus = async (id, newStatus) => {
-    setLoadingId(id);
-    await updateOrderStatus(id, newStatus);
+  // const changeStatus = async (id, newStatus, oldStatus) => {
+  //   setLoadingId(id);
+  //   // const loadingToastId = notifyLoading("Updating order status...");
+  //   try {
+  //     await updateOrderStatus(id, newStatus, oldStatus);
+  //     notifySuccess(`Order send to ${newStatus} successfully`);
+  //     setPopupOrder(null);
+  //   } catch (error) {
+  //     notifyError("Failed to update order status. Please try again.");
+  //   } finally {
+  //     setLoadingId(null);
+  //     toast.dismiss(loadingToastId);
+  //   }
+  // };
+
+  const changeStatus = async (id, newStatus, oldStatus) => {
+  setLoadingId(id);
+
+  try {
+    await updateOrderStatus(id, newStatus, oldStatus);
+    notifySuccess(`Order moved to ${newStatus}`);
     setPopupOrder(null);
+  } catch (error) {
+    notifyError("Failed to update order status");
+  } finally {
     setLoadingId(null);
-  };
+  }
+};
 
   // Search: open popup
   const handleSearch = () => {
     const token = Number(searchToken);
-    if (!token) return;
+    if (!token) {
+      notifyError("Please enter a valid token number");
+      return;
+    }
 
     const found = orders.find((o) => Number(o.token) === token);
-    console.log("Search for token", token, "found:", found);
     if (!found) {
-      alert("Order not found");
+      notifyError("Order not found");
       return;
     }
 
@@ -233,18 +271,18 @@ const StaffDashboard = () => {
             <section className="sd-col-new sd-col-compact">
               <div className="sd-col-head">
                 <span>New Orders</span>
-                <span className="sd-col-badge">{counts.confirmed}</span>
+                <span className="sd-col-badge sd-col-badge-created ">{counts.confirmed}</span>
               </div>
 
               <div className="sd-col-scroll-horizontal">
                 <div className="sd-grid-horizontal" title="Click to Accept">
-                  {(confirmedOrders.data || []).map((o, index) => (
+                  {(confirmedOrders || []).map((o, index) => (
                     <div
                       key={o.token}
                       className={`sd-card sd-card-confirmed sd-card-small ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        changeStatus(o.id, "preparing");
+                        changeStatus(o.id, "preparing", o.status);
                       }}
                     >
                       {/* Priority Badge */}
@@ -256,7 +294,7 @@ const StaffDashboard = () => {
 
                       <div className="sd-card-title">Token #{o.token}</div>
 
-                      <div className="sd-card-foot">
+                      <div className="sd-card-foot sd-col-badge-confirmed">
                         <span className="sd-total">
                           ${calcTotal(o).toFixed(2)}
                         </span>
@@ -283,12 +321,12 @@ const StaffDashboard = () => {
             <section className="sd-col">
               <div className="sd-col-head">
                 <span>Preparing</span>
-                <span className="sd-col-badge">{counts.preparing}</span>
+                <span className="sd-col-badge sd-col-badge-confirmed">{counts.preparing}</span>
               </div>
 
               <div className="sd-col-scroll">
                 <div className="sd-grid">
-                  {(preparingOrders.data || []).map((o, index) => (
+                  {(preparingOrders || []).map((o, index) => (
                     <div
                       key={o.token}
                       className={`sd-card sd-card-confirmed ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
@@ -326,7 +364,7 @@ const StaffDashboard = () => {
                           className="sd-btn sd-btn-confirmed sd-btn-full"
                           onClick={(e) => {
                             e.stopPropagation();
-                            changeStatus(o.id, "ready");
+                            changeStatus(o.id, "ready", o.status);
                           }}
                           disabled={isLoading && loadingId === o.id}
                         >
@@ -353,12 +391,12 @@ const StaffDashboard = () => {
             <section className="sd-col">
               <div className="sd-col-head">
                 <span>Ready</span>
-                <span className="sd-col-badge">{counts.ready}</span>
+                <span className="sd-col-badge sd-col-badge-ready">{counts.ready}</span>
               </div>
 
               <div className="sd-col-scroll">
                 <div className="sd-grid">
-                  {(readyOrders.data || []).map((o, index) => (
+                  {(readyOrders || []).map((o, index) => (
                     <div
                       key={o.token}
                       className={`sd-card sd-card-ready ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
@@ -396,7 +434,7 @@ const StaffDashboard = () => {
                           className="sd-btn sd-btn-ready sd-btn-full"
                           onClick={(e) => {
                             e.stopPropagation();
-                            changeStatus(o.id, "delivered");
+                            changeStatus(o.id, "delivered", o.status);
                           }}
                           disabled={isLoading && loadingId === o.id}
                         >
@@ -424,23 +462,21 @@ const StaffDashboard = () => {
               <section className="sd-col">
                 <div className="sd-col-head">
                   <span>Delivered</span>
-                  <span className="sd-col-badge">{counts.delivered}</span>
+                  <span className="sd-col-badge sd-col-badge-delivered">{counts.delivered}</span>
                 </div>
 
                 <div className="sd-col-scroll">
                   <div className="sd-grid">
-                    {(deliveredOrders.data || []).map((o, index) => (
+                    {(deliveredOrders || []).map((o, index) => (
                       <div
                         key={o.token}
-                        className={`sd-card sd-card-delivered ${getPriorityClass(index)} ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
-                        onClick={() => openPopup(o)}
+                        className={`sd-card sd-card-delivered ${highlightToken === o.token ? "sd-card-highlight" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          changeStatus(o.id, "confirmed", o.status);
+                        }}
                       >
-                        {/* Priority Badge */}
-                        {isPriority(index) && (
-                          <div className="sd-priority-badge sd-priority-badge-delivered">
-                            {index === 0 ? "🔥 #1" : "⚡ #2"}
-                          </div>
-                        )}
+
                         <div className="sd-card-title">Token #{o.token}</div>
 
                         <div className="sd-card-items">
@@ -460,24 +496,7 @@ const StaffDashboard = () => {
                             {o.payment_method === "cash" ? "Cash" : "Online"}
                           </span>
                         </div>
-                        <div className="sd-card-actions">
-                          <button
-                            className="sd-btn sd-btn-ghost sd-btn-full"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              changeStatus(o.id, "confirmed");
-                            }}
-                            disabled={isLoading && loadingId === o.id}
-                          >
-                            {isLoading && loadingId === o.id ? (
-                              <>
-                                <span className="spinner"></span> Processing...
-                              </>
-                            ) : (
-                              "Remove"
-                            )}
-                          </button>
-                        </div>
+
                       </div>
                     ))}
 
@@ -549,7 +568,7 @@ const StaffDashboard = () => {
                   {popupOrder.status === "preparing" && (
                     <button
                       className="sd-btn sd-btn-confirmed sd-btn-full"
-                      onClick={() => changeStatus(popupOrder.id, "ready")}
+                      onClick={() => changeStatus(popupOrder.id, "ready", popupOrder.status)}
                     >
                       Ready
                     </button>
@@ -558,7 +577,7 @@ const StaffDashboard = () => {
                   {popupOrder.status === "ready" && (
                     <button
                       className="sd-btn sd-btn-ready sd-btn-full"
-                      onClick={() => changeStatus(popupOrder.id, "delivered")}
+                      onClick={() => changeStatus(popupOrder.id, "delivered", popupOrder.status)}
                     >
                       Deliver
                     </button>

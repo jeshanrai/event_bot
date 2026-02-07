@@ -5,7 +5,7 @@ import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 
 
-const VerifyOTP = () => {
+const VerifyOTP = () => {  
   const navigate = useNavigate();
   const [otp, setOtp] = useState("");
 
@@ -13,7 +13,7 @@ const VerifyOTP = () => {
   e.preventDefault();
 
   // After successful OTP verification
-  navigate("/reset-password");
+  navigate(`/reset-password/${otp}` );
 };
 
 
@@ -21,16 +21,16 @@ const VerifyOTP = () => {
     <AuthLayout title="Enter Verification Code">
       <form onSubmit={handleVerify} className="auth-form">
         <Input
-          label="Verification PIN"
+          label="Verification Token"
           type="text"
-          placeholder="Enter OTP code"
+          placeholder="Enter your token here"
           value={otp}
           onChange={(e) => setOtp(e.target.value)}
           required
         />
 
         <Button type="submit" variant="primary" size="large" style={{ width: "100%" }}>
-          Verify OTP
+          Verify Token
         </Button>
 
         

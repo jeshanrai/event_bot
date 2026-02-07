@@ -3,44 +3,55 @@ import { useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import useAuth from '../hooks/useAuth';
+import { useParams } from "react-router-dom";
+import { notifyError, notifyLoading, notifySuccess } from "../components/StaffDashboard/utils/notify";
 
 
 const ResetPassword = () => {
+  const { token } = useParams(); 
   const navigate = useNavigate();
+  const { resetPassword } = useAuth();
 
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
   });
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    setError("");
+    
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      notifyError("Passwords do not match");
       return;
     }
 
     setIsLoading(true);
+    const loadingToastId = notifyLoading("Updating password...");
 
     try {
       // TODO: Call backend API to reset password
-      // await resetPassword(formData.password);
+      const response = await resetPassword(token, formData.password);
 
-      alert("Password changed successfully!");
+     if(response.success === true) {
+      notifySuccess("Password changed successfully!");
       navigate("/login");
+     } else {
+      notifyError(response.message || "Failed to reset password. Please try again. harry");
+     }
     } catch (err) {
-      setError("Failed to reset password. Please try again.");
+      console.log(err);
+      notifyError( err.response.data.message || "Failed to reset password. Please try again. diwas");
     } finally {
       setIsLoading(false);
+      toast.dismiss(loadingToastId);
     }
   };
 
@@ -66,9 +77,6 @@ const ResetPassword = () => {
           onChange={handleChange}
           required
         />
-
-        {error && <div className="error-message">⚠️ {error}</div>}
-
         <Button
           type="submit"
           variant="primary"

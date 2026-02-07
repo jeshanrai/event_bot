@@ -2186,3 +2186,41 @@ textarea.form-textarea {
     font-size: 13px;
     line-height: 1.8;
 }
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+.confirm-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 22px;
+  border-radius: 12px;
+  width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  z-index: 1001;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.stat-trend--up {
+  color: #16a34a;
+}
+
+.stat-trend--down {
+  color: #dc2626;
+}
+
+.stat-trend--neutral {
+  color: #94a3b8;
+}

@@ -1,0 +1,17 @@
+
+
+.toast-success,
+.toast-error,
+.toast-loading {
+  animation: toast-slide-in 0.3s ease forwards, toast-slide-out 0.3s ease 2.2s forwards;
+}
+
+@keyframes toast-slide-in {
+  0% { transform: translateX(100%) scale(0.8); opacity: 0; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+@keyframes toast-slide-out {
+  0% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(100%) scale(0.8); opacity: 0; }
+}

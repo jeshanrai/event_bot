@@ -4,28 +4,35 @@ import AuthLayout from '../components/AuthLayout';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import useAuth from '../hooks/useAuth';
+import { notifyError, notifyLoading, notifySuccess } from "../components/StaffDashboard/utils/notify";
 
 const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
-    const [formData, setFormData] = useState({ email: '', password: '' });
-    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({ email: '', password: '',rememberMe: false });
+    // const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-        setError('');
+        const { name, value, type, checked } = e.target;
+        setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
         setIsLoading(true);
 
         try {
-            const userData = await login(formData.email, formData.password);
+            const userData = await login(
+                formData.email,
+                formData.password,
+                formData.rememberMe
+            );
+
+            notifySuccess("Signed in successfully");
+
             if (userData.role === 'staff') {
                 navigate('/staff-dashboard');
             } else if (userData.role === 'superadmin') {
@@ -33,8 +40,10 @@ const Login = () => {
             } else {
                 navigate('/dashboard');
             }
+
         } catch (err) {
-            setError(err.response?.data?.message || 'Invalid email or password');
+            const errorMessage = err.response?.data?.message || 'Invalid email or password';
+            notifyError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -78,21 +87,28 @@ const Login = () => {
 
                 <div className="form-options" style={{ justifyContent: "space-between" }}>
 
-                     <label className="checkbox-label">
-                          <input type="checkbox" className="checkbox-input" />
-                           <span className="checkbox-text">Remember me</span>
-                      </label>
+                    <label className="checkbox-label">
+                        <input
+                            type="checkbox"
+                            className="checkbox-input"
+                            checked={formData.rememberMe}
+                            onChange={(e) => {
+                                handleChange({ target: { name: 'rememberMe', value: e.target.checked } });
+                            }}
+                        />
+                        <span className="checkbox-text">Remember me</span>
+                    </label>
                     <Link to="/forget-password" className="form-link">
-                            Forgot password?
+                        Forgot password?
                     </Link>
-               </div>
+                </div>
 
 
-                {error && (
+                {/* {error && (
                     <div className="error-message">
                         ⚠️ {error}
                     </div>
-                )}
+                )} */}
 
                 <Button
                     type="submit"

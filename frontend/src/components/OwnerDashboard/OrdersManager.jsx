@@ -5,9 +5,23 @@ import { getStatusColor, getStatusLabel } from '../StaffDashboard/utils/orderUti
 import OrderDetailsPanel from '../StaffDashboard/OrderDetailsPanel';
 import './OwnerDashboard.css';
 
+// Add these notification functions if not already available
+const notifySuccess = (message) => {
+    console.log('Success:', message);
+    // Replace with your actual notification system
+    alert(`Success: ${message}`);
+};
+
+const notifyError = (message) => {
+    console.error('Error:', message);
+    // Replace with your actual notification system
+    alert(`Error: ${message}`);
+};
+
 const OrdersManager = () => {
+   
     const {
-        orders,
+        orders = [],
         isLoading,
         updateOrderStatus,
         fetchOrders // To refresh if needed
@@ -132,6 +146,8 @@ const OrdersManager = () => {
                             onToggleSidebar={() => { }} // Not needed in drawer
                             isSidebarOpen={true} // Force visible
                             onLogout={() => { }} // Not needed in drawer
+                             notifySuccess={notifySuccess}
+                            notifyError={notifyError}
                         />
                     </div>
                 </>
