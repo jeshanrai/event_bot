@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
-import useAuth from '../hooks/useAuth';
-import OwnerSidebar from '../components/OwnerDashboard/OwnerSidebar';
-import DashboardHome from '../components/OwnerDashboard/DashboardHome';
-import OrdersManager from '../components/OwnerDashboard/OrdersManager';
-import MenuManager from '../components/OwnerDashboard/MenuManager';
-import AISettings from '../components/OwnerDashboard/AISettings';
-import Analytics from '../components/OwnerDashboard/Analytics';
-import StaffManager from '../components/OwnerDashboard/StaffManager';
-import ConnectHub from '../components/OwnerDashboard/ConnectHub';
-import Settings from '../components/OwnerDashboard/Settings';
-import '../components/OwnerDashboard/OwnerDashboard.css';
+import useAuth from '../../hooks/useAuth';
+import OwnerSidebar from '../../components/OwnerDashboard/OwnerSidebar';
+import DashboardHome from '../../components/OwnerDashboard/DashboardHome';
+import OrdersManager from '../../components/OwnerDashboard/OrdersManager';
+import MenuManager from '../../components/OwnerDashboard/MenuManager';
+import AISettings from '../../components/OwnerDashboard/AISettings';
+import Analytics from '../../components/OwnerDashboard/Analytics';
+import StaffManager from '../../components/OwnerDashboard/StaffManager';
+import ConnectHub from '../../components/OwnerDashboard/ConnectHub';
+import Settings from '../../components/OwnerDashboard/Settings';
+import '../../components/OwnerDashboard/OwnerDashboard.css';
 
 // Placeholder components for future implementation
 const PlaceholderFrame = ({ title }) => (
@@ -22,6 +22,7 @@ const PlaceholderFrame = ({ title }) => (
 );
 
 const Dashboard = () => {
+
     const navigate = useNavigate();
     const { user, logout, loading } = useAuth();
     const [activeFrame, setActiveFrame] = useState('home');

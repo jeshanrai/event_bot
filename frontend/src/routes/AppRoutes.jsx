@@ -2,13 +2,17 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Login from '../pages/Login';
 import RestaurantSignup from '../pages/RestaurantSignup';
-import Dashboard from '../pages/Dashboard';
+import Dashboard from '../pages/dashboard/Dashboard';
 import StaffDashboard from '../pages/StaffDashboard';
 import AdminDashboard from '../pages/AdminDashboard';
 import ResetPassword from '../pages/ResetPassword';
 import VerifyOTP from '../pages/VerfiyOTP';
 import ForgetPassword from '../pages/ForgetPassword';
 import ProtectedRoute from "../routes/ProtectedRoute";
+import DashboardHome from '../components/OwnerDashboard/DashboardHome';
+import Orders from '../pages/dashboard/orders';
+// import Settings from '../pages/dashboard/settings';
+import DashboardLayout from '../pages/dashboard/DashboardLayout';
 
 const AppRoutes = () => {
     return (
@@ -21,14 +25,18 @@ const AppRoutes = () => {
   <Route path="/reset-password/:token" element={<ResetPassword />} />
 
   {/* Protected routes */}
-  <Route
-    path="/dashboard"
-    element={
-      <ProtectedRoute>
-        <Dashboard />
-      </ProtectedRoute>
-    }
-  />
+   {/* Protected Routes Wrapper */}
+        <Route element={<ProtectedRoute />}>
+
+          <Route path="/dashboard" element={<DashboardLayout />}>
+
+            <Route index element={<DashboardHome />} />
+            <Route path="orders" element={<Orders />} />
+            {/* <Route path="settings" element={<Settings />} /> */}
+
+          </Route>
+
+        </Route>
 
   <Route
     path="/admin-dashboard"
@@ -47,6 +55,8 @@ const AppRoutes = () => {
       </ProtectedRoute>
     }
   />
+
+ 
 </Routes>
     );
 };

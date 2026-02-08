@@ -74,17 +74,27 @@ const Order = {
     const countQuery = `SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = DATE(NOW())`;
     const pendingQuery = `SELECT COUNT(*) as count FROM orders WHERE status IN ('created', 'confirmed', 'preparing')`;
     // AI handling is hardcoded for now or requires specific field logic
+    const aiHandledQuery = `SELECT COUNT(*) as count FROM orders WHERE ai_handled = true AND DATE(created_at) = DATE(NOW())`;
+    const totalCustomersQuery = `SELECT COUNT(DISTINCT customer_platform_id) as total FROM orders WHERE DATE(created_at) = DATE(NOW())`;
+    const avgOrderValueQuery = `SELECT AVG(total_amount) as avg FROM orders WHERE DATE(created_at) = DATE(NOW())`;
 
-    const [revenueRes, countRes, pendingRes] = await Promise.all([
+    const [revenueRes, countRes, pendingRes, aiHandledRes, totalCustomersRes, avgOrderValueRes] = await Promise.all([
       db.query(revenueQuery),
       db.query(countQuery),
       db.query(pendingQuery),
+      db.query(aiHandledQuery),
+      db.query(totalCustomersQuery),
+      db.query(avgOrderValueQuery),
     ]);
 
     return {
       revenueToday: revenueRes.rows[0].total || 0,
       todaysOrders: countRes.rows[0].count || 0,
       pendingOrders: pendingRes.rows[0].count || 0,
+      aiHandledPercentage: aiHandledRes.rows[0].percentage || 0, // Placeholder for future AI handling logic
+      totalCustomers: totalCustomersRes.rows[0].total || 0, // Placeholder for future AI handling logic
+      avgOrderValue: avgOrderValueRes.rows[0].avg || 0, // Placeholder for future AI handling logic
+     // Placeholder for future AI handling logic
     };
   },
 

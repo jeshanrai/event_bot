@@ -27,7 +27,18 @@ const OwnerSidebar = ({ activeFrame, onNavigate, onLogout, isOpen }) => {
     ];
 
     return (
-        <aside className={`owner-sidebar ${isOpen ? 'open' : ''}`}>
+        <>
+         <aside className="sidebar">
+        <NavLink to="/owner">Home</NavLink>
+        <NavLink to="/owner/orders">Orders</NavLink>
+        <NavLink to="/owner/menu">Menu</NavLink>
+        <NavLink to="/owner/ai-settings">AI Settings</NavLink>
+        <NavLink to="/owner/analytics">Analytics</NavLink>
+        <NavLink to="/owner/staff">Staff</NavLink>
+        <NavLink to="/owner/connect">Connect</NavLink>
+        <NavLink to="/owner/settings">Settings</NavLink>
+      </aside>
+        {/* <aside className={`owner-sidebar ${isOpen ? 'open' : ''}`}>
             <div className="owner-logo">
                 <Logo size={32} />
                 <span>RestaurantAI</span>
@@ -50,7 +61,8 @@ const OwnerSidebar = ({ activeFrame, onNavigate, onLogout, isOpen }) => {
                     <span>Logout</span>
                 </button>
             </nav>
-        </aside>
+        </aside> */}
+        </>
     );
 };
 

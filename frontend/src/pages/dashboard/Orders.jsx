@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Search, Filter, X } from 'lucide-react';
-import { useOrders } from '../StaffDashboard/hooks/useOrders';
-import { getStatusColor, getStatusLabel } from '../StaffDashboard/utils/orderUtils';
-import OrderDetailsPanel from '../StaffDashboard/OrderDetailsPanel';
-import './OwnerDashboard.css';
+// import { useOrders } from '../../../StaffDashboard/hooks/useOrders';
+import { useOrders } from '../../components/StaffDashboard/hooks/useOrders';
+import { getStatusColor, getStatusLabel } from '../../components/StaffDashboard/utils/orderUtils';
+import OrderDetailsPanel from '../../components/StaffDashboard/OrderDetailsPanel';
+import '../../components/OwnerDashboard/OwnerDashboard.css';
 // import api from '../../services/api';
 
 // Add these notification functions if not already available
@@ -19,7 +20,7 @@ const notifyError = (message) => {
     alert(`Error: ${message}`);
 };
 
-const OrdersManager = () => {
+const Orders = () => {
    
     const {
         orders = [],
@@ -157,4 +158,4 @@ const OrdersManager = () => {
     );
 };
 
-export default OrdersManager;
+export default Orders;
