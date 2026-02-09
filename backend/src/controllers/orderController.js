@@ -17,20 +17,22 @@ const createOrder = async (req, res) => {
 
 const getDashboardStats = async (req, res) => {
   try {
-    const stats = await Order.getStats();
-    // Add hardcoded values for now for missing metrics
+    // Get restaurant ID from authenticated user
+    const restaurantId = req.user.restaurant_id || null;
+
+    const stats = await Order.getStats(restaurantId);
+
     res.json({
-      ...stats,
-      aiHandledPercentage: 85,
-      totalCustomers: 120, // This should come from DB eventually
-      avgOrderValue:
-        stats.todaysOrders > 0
-          ? Math.round(stats.revenueToday / stats.todaysOrders)
-          : 0,
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error fetching stats" });
+    console.error("Dashboard stats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching dashboard stats",
+    });
   }
 };
 

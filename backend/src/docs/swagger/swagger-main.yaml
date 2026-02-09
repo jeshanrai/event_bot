@@ -20,7 +20,7 @@ info:
     email: support@restaurant-api.com
 
 servers:
-  - url: http://localhost:5000/api
+  - url: http://localhost:3000/api
     description: Development server
   - url: https://event-bot-admin.chotkari.com/api
     description: Production server
