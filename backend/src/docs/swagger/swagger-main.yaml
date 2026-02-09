@@ -146,6 +146,37 @@ components:
           type: string
           example: "StaffPass123!"
 
+          # User Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        name:
+          type: string
+          example: John Doe
+        role:
+          type: string
+          enum: [staff, restaurant_owner, superadmin]
+          example: staff
+        restaurant_id:
+          type: integer
+          example: 1
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     # ==================== Password Management Schemas ====================
     ForgotPasswordRequest:
       type: object
@@ -486,6 +517,122 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "403":
           $ref: "#/components/responses/ForbiddenError"
+
+  /restaurant/staff:
+    get:
+      tags: [Users]
+      summary: Get all staff members
+      description: Retrieve list of staff for authenticated user's restaurant
+      operationId: getStaff
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Staff list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /restaurant/staff/{id}:
+    delete:
+      tags: [Users]
+      summary: Delete staff member
+      description: Permanently delete a staff member (hard delete)
+      operationId: deleteStaff
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Staff member ID
+          schema:
+            type: integer
+            example: 5
+      responses:
+        "200":
+          description: Staff member deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Staff member John Doe has been deleted successfully
+        "400":
+          description: Cannot delete self
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /restaurant/staff/{id}/deactivate:
+    patch:
+      tags: [Users]
+      summary: Deactivate staff member
+      description: Soft delete - deactivate staff member without removing data
+      operationId: deactivateStaff
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Staff member ID
+          schema:
+            type: integer
+            example: 5
+      responses:
+        "200":
+          description: Staff member deactivated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Success"
+        "400":
+          description: Cannot deactivate self
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /restaurant/staff/{id}/reactivate:
+    patch:
+      tags: [Users]
+      summary: Reactivate staff member
+      description: Restore a previously deactivated staff member
+      operationId: reactivateStaff
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Staff member ID
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Staff member reactivated successfully
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   # ==================== Password Management Endpoints ====================
   /auth/forgot-password:
