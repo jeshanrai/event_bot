@@ -10,7 +10,7 @@ import VerifyOTP from "../pages/VerfiyOTP";
 import ForgetPassword from "../pages/ForgetPassword";
 import ProtectedRoute from "../routes/ProtectedRoute";
 import DashboardHome from "../components/OwnerDashboard/DashboardHome";
-import Orders from "../pages/dashboard/orders";
+import Orders from "../pages/dashboard/Orders";
 import AISettingsPage from "../pages/dashboard/Settings";
 // import Settings from '../pages/dashboard/settings';
 import DashboardLayout from "../pages/dashboard/DashboardLayout";
