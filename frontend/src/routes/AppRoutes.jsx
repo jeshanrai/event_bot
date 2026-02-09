@@ -12,9 +12,7 @@ import ProtectedRoute from "../routes/ProtectedRoute";
 import DashboardHome from "../components/OwnerDashboard/DashboardHome";
 import Orders from "../pages/dashboard/Orders";
 import AISettingsPage from "../pages/dashboard/Settings";
-// import Settings from '../pages/dashboard/settings';
 import DashboardLayout from "../pages/dashboard/DashboardLayout";
-import { Menu } from "lucide-react";
 import Menus from "../pages/dashboard/Menus";
 import Staffs from "../pages/dashboard/Staff";
 import CONNECT from "../pages/dashboard/Connect";
@@ -31,8 +29,6 @@ const AppRoutes = () => {
       <Route path="/verifyOTP" element={<VerifyOTP />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-      {/* Protected routes */}
-      {/* Protected Routes Wrapper */}
       <Route
         path="/dashboard"
         element={
