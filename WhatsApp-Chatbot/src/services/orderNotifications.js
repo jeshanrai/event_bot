@@ -280,7 +280,7 @@ export async function processOrderStatusChange(
       );
     } else if (newStatus === "ready") {
       await sendOrderReadyNotification(orderId, userId, platform, businessId);
-    } else if (newStatus === "completed") {
+    } else if (newStatus === "delivered") {
       // Order picked up/completed - optional thank you message
       await sendThankYouMessage(userId, platform, businessId, "order_complete");
     }

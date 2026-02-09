@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS orders (
             'created',
             'confirmed',
             'preparing',
+            'ready',
+            'delivered',
             'completed',
             'cancelled'
         )),

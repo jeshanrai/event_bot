@@ -1,4 +1,6 @@
 const Order = require("../models/orderModel");
+const axios = require("axios");
+const CHATBOT_API_URL = process.env.CHATBOT_API_URL;
 
 const createOrder = async (req, res) => {
   try {
@@ -15,20 +17,22 @@ const createOrder = async (req, res) => {
 
 const getDashboardStats = async (req, res) => {
   try {
-    const stats = await Order.getStats();
-    // Add hardcoded values for now for missing metrics
+    // Get restaurant ID from authenticated user
+    const restaurantId = req.user.restaurant_id || null;
+
+    const stats = await Order.getStats(restaurantId);
+
     res.json({
-      ...stats,
-      aiHandledPercentage: 85,
-      totalCustomers: 120, // This should come from DB eventually
-      avgOrderValue:
-        stats.todaysOrders > 0
-          ? Math.round(stats.revenueToday / stats.todaysOrders)
-          : 0,
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error fetching stats" });
+    console.error("Dashboard stats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching dashboard stats",
+    });
   }
 };
 
@@ -44,6 +48,7 @@ const updateOrderStatus = async (req, res) => {
       "preparing",
       "ready",
       "delivered",
+      "completed",
       "cancelled",
     ];
     if (!validStatuses.includes(status)) {
@@ -55,7 +60,22 @@ const updateOrderStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
-
+    try {
+      const changedBy = req.user ? req.user.name || "Admin" : "Admin";
+      await axios.post(
+        `${CHATBOT_API_URL}/api/notify-order-status`,
+        {
+          orderId: id,
+          newStatus: status,
+          changedBy: changedBy,
+        },
+        { timeout: 5000 },
+      );
+      console.log(`✅ Notification sent for Order ${id}`);
+    } catch (notifError) {
+      console.error("⚠️ Notification failed:", notifError.message);
+      // Don't fail the update if notification fails
+    }
     res.json(order);
   } catch (error) {
     console.error(error);

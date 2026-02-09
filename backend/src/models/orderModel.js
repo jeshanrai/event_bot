@@ -67,37 +67,155 @@ const Order = {
     }
   },
 
-  getStats: async () => {
-    const today = new Date().toISOString().split("T")[0];
+  getStats: async (restaurantId = null) => {
+    const restaurantFilter = restaurantId ? "AND restaurant_id = $1" : "";
+    const params = restaurantId ? [restaurantId] : [];
 
-    const revenueQuery = `SELECT SUM(total_amount) as total FROM orders WHERE DATE(created_at) = DATE(NOW())`;
-    const countQuery = `SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = DATE(NOW())`;
-    const pendingQuery = `SELECT COUNT(*) as count FROM orders WHERE status IN ('created', 'confirmed', 'preparing')`;
-    // AI handling is hardcoded for now or requires specific field logic
-    const aiHandledQuery = `SELECT COUNT(*) as count FROM orders WHERE ai_handled = true AND DATE(created_at) = DATE(NOW())`;
-    const totalCustomersQuery = `SELECT COUNT(DISTINCT customer_platform_id) as total FROM orders WHERE DATE(created_at) = DATE(NOW())`;
-    const avgOrderValueQuery = `SELECT AVG(total_amount) as avg FROM orders WHERE DATE(created_at) = DATE(NOW())`;
+    // Query 1: Revenue metrics
+    const revenueQuery = `
+    SELECT 
+      -- Today
+      COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE THEN total_amount END), 0) as revenue_today,
+      COUNT(CASE WHEN DATE(created_at) = CURRENT_DATE THEN 1 END) as orders_today,
+      
+      -- Yesterday
+      COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE - 1 THEN total_amount END), 0) as revenue_yesterday,
+      
+      -- This Week
+      COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN total_amount END), 0) as revenue_week,
+      
+      -- This Month
+      COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN total_amount END), 0) as revenue_month
+      
+    FROM orders
+    WHERE status NOT IN ('cancelled')
+    ${restaurantFilter}
+  `;
 
-    const [revenueRes, countRes, pendingRes, aiHandledRes, totalCustomersRes, avgOrderValueRes] = await Promise.all([
-      db.query(revenueQuery),
-      db.query(countQuery),
-      db.query(pendingQuery),
-      db.query(aiHandledQuery),
-      db.query(totalCustomersQuery),
-      db.query(avgOrderValueQuery),
-    ]);
+    // Query 2: Order status breakdown
+    const statusQuery = `
+    SELECT 
+      status,
+      COUNT(*) as count
+    FROM orders
+    WHERE DATE(created_at) = CURRENT_DATE
+    ${restaurantFilter}
+    GROUP BY status
+  `;
+
+    // Query 3: Current queue
+    const queueQuery = `
+    SELECT 
+      COUNT(*) as queue_length,
+      COALESCE(ROUND(AVG(preparation_time_minutes)), 0) as avg_wait_time
+    FROM orders
+    WHERE status IN ('confirmed', 'preparing')
+    ${restaurantFilter}
+  `;
+
+    // Query 4: Kitchen performance
+    const performanceQuery = `
+    SELECT 
+      COALESCE(ROUND(AVG(
+        EXTRACT(EPOCH FROM (actual_ready_time - created_at))/60
+      )::numeric, 1), 0) as avg_prep_minutes
+    FROM orders
+    WHERE status IN ('ready', 'completed')
+      AND actual_ready_time IS NOT NULL
+      AND DATE(created_at) = CURRENT_DATE
+    ${restaurantFilter}
+  `;
+
+    // Query 5: Platform breakdown
+    const platformQuery = `
+    SELECT 
+      platform,
+      COUNT(*) as count
+    FROM orders
+    WHERE DATE(created_at) = CURRENT_DATE
+    ${restaurantFilter}
+    GROUP BY platform
+  `;
+
+    // Execute all queries
+    const [revenueRes, statusRes, queueRes, performanceRes, platformRes] =
+      await Promise.all([
+        db.query(revenueQuery, params),
+        db.query(statusQuery, params),
+        db.query(queueQuery, params),
+        db.query(performanceQuery, params),
+        db.query(platformQuery, params),
+      ]);
+
+    // Format status breakdown
+    const ordersByStatus = statusRes.rows.reduce(
+      (acc, row) => {
+        acc[row.status] = parseInt(row.count);
+        return acc;
+      },
+      {
+        created: 0,
+        confirmed: 0,
+        preparing: 0,
+        ready: 0,
+        completed: 0,
+        cancelled: 0,
+      },
+    );
+
+    // Format platform breakdown
+    const ordersByPlatform = platformRes.rows.reduce(
+      (acc, row) => {
+        acc[row.platform] = parseInt(row.count);
+        return acc;
+      },
+      {
+        whatsapp: 0,
+        messenger: 0,
+        web: 0,
+      },
+    );
+
+    const revenue = revenueRes.rows[0];
+    const queue = queueRes.rows[0];
+    const performance = performanceRes.rows[0];
 
     return {
-      revenueToday: revenueRes.rows[0].total || 0,
-      todaysOrders: countRes.rows[0].count || 0,
-      pendingOrders: pendingRes.rows[0].count || 0,
-      aiHandledPercentage: aiHandledRes.rows[0].percentage || 0, // Placeholder for future AI handling logic
-      totalCustomers: totalCustomersRes.rows[0].total || 0, // Placeholder for future AI handling logic
-      avgOrderValue: avgOrderValueRes.rows[0].avg || 0, // Placeholder for future AI handling logic
-     // Placeholder for future AI handling logic
+      // Revenue metrics
+      revenue: {
+        today: parseFloat(revenue.revenue_today) || 0,
+        yesterday: parseFloat(revenue.revenue_yesterday) || 0,
+        week: parseFloat(revenue.revenue_week) || 0,
+        month: parseFloat(revenue.revenue_month) || 0,
+        growth:
+          revenue.revenue_yesterday > 0
+            ? (
+                ((revenue.revenue_today - revenue.revenue_yesterday) /
+                  revenue.revenue_yesterday) *
+                100
+              ).toFixed(1)
+            : 0,
+      },
+
+      // Order metrics
+      orders: {
+        today: parseInt(revenue.orders_today) || 0,
+        byStatus: ordersByStatus,
+        byPlatform: ordersByPlatform,
+        avgValue:
+          revenue.orders_today > 0
+            ? (revenue.revenue_today / revenue.orders_today).toFixed(2)
+            : 0,
+      },
+
+      // Kitchen metrics
+      kitchen: {
+        queueLength: parseInt(queue.queue_length) || 0,
+        avgWaitTime: parseInt(queue.avg_wait_time) || 0,
+        avgPrepTime: parseFloat(performance.avg_prep_minutes) || 0,
+      },
     };
   },
-
   updateStatus: async (orderId, status, userId) => {
     const query = `
             UPDATE orders 

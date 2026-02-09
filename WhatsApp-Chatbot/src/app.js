@@ -1220,6 +1220,25 @@ app.get("/admin/dashboard", async (req, res) => {
   }
 });
 
+app.post("/api/notify-order-status", async (req, res) => {
+  try {
+    const { orderId, newStatus, changedBy } = req.body;
+
+    console.log(`📞 Notification request: Order ${orderId} → ${newStatus}`);
+
+    const result = await processOrderStatusChange(
+      orderId,
+      newStatus,
+      changedBy || "admin",
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("❌ Notification error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /* ======================
    SERVER START
 ====================== */
