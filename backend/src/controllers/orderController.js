@@ -48,6 +48,7 @@ const updateOrderStatus = async (req, res) => {
       "preparing",
       "ready",
       "delivered",
+      "completed",
       "cancelled",
     ];
     if (!validStatuses.includes(status)) {
