@@ -4,6 +4,7 @@ import { useOrders } from '../StaffDashboard/hooks/useOrders';
 import { getStatusColor, getStatusLabel } from '../StaffDashboard/utils/orderUtils';
 import OrderDetailsPanel from '../StaffDashboard/OrderDetailsPanel';
 import './OwnerDashboard.css';
+import { useEffect } from 'react';
 // import api from '../../services/api';
 
 // Add these notification functions if not already available
@@ -27,6 +28,10 @@ const OrdersManager = () => {
         updateOrderStatus,
         fetchOrders // To refresh if needed
     } = useOrders();
+   
+     useEffect(() => {
+        fetchOrders();
+      }, []);
 
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,7 +49,7 @@ const OrdersManager = () => {
     });
 
     const closeDrawer = () => setSelectedOrder(null);
-
+console.log('OrdersManager rendered with orders:', orders);
     return (
         <div className="orders-manager">
             {/* Header / Controls */}

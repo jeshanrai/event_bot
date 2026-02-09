@@ -14,6 +14,12 @@ import Orders from "../pages/dashboard/orders";
 import AISettingsPage from "../pages/dashboard/Settings";
 // import Settings from '../pages/dashboard/settings';
 import DashboardLayout from "../pages/dashboard/DashboardLayout";
+import { Menu } from "lucide-react";
+import Menus from "../pages/dashboard/Menus";
+import Staffs from "../pages/dashboard/Staff";
+import CONNECT from "../pages/dashboard/Connect";
+import SettingsPage from "../pages/dashboard/Settings";
+import AnalyticsPage from "../pages/dashboard/Analytics";
 
 const AppRoutes = () => {
   return (
@@ -48,11 +54,61 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/dashboard/menu"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Menus />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard/ai-settings"
         element={
           <ProtectedRoute>
             <DashboardLayout>
               <AISettingsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/staff"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Staffs />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/connect"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <CONNECT />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/settings"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <SettingsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/analytics"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <AnalyticsPage />
             </DashboardLayout>
           </ProtectedRoute>
         }

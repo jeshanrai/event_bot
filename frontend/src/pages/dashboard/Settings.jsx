@@ -1,7 +1,7 @@
-import AISettings from "../../components/OwnerDashboard/AISettings";
+import Settings from "../../components/OwnerDashboard/Settings";
 
-const AISettingsPage = () => {
-  return <AISettings />;
+const SettingsPage = () => {
+  return <Settings />;
 };
 
-export default AISettingsPage;
+export default SettingsPage;
