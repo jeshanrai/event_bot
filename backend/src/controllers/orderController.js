@@ -1,4 +1,6 @@
 const Order = require("../models/orderModel");
+const axios = require("axios");
+const CHATBOT_API_URL = process.env.CHATBOT_API_URL;
 
 const createOrder = async (req, res) => {
   try {
@@ -55,7 +57,22 @@ const updateOrderStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
-
+    try {
+      const changedBy = req.user ? req.user.name || "Admin" : "Admin";
+      await axios.post(
+        `${CHATBOT_API_URL}/api/notify-order-status`,
+        {
+          orderId: id,
+          newStatus: status,
+          changedBy: changedBy,
+        },
+        { timeout: 5000 },
+      );
+      console.log(`✅ Notification sent for Order ${id}`);
+    } catch (notifError) {
+      console.error("⚠️ Notification failed:", notifError.message);
+      // Don't fail the update if notification fails
+    }
     res.json(order);
   } catch (error) {
     console.error(error);
