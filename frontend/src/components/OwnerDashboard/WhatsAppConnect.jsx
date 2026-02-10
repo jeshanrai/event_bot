@@ -6,7 +6,70 @@ const WhatsAppConnect = () => {
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [signupData, setSignupData] = useState(null);
+
+    // Refs to coordinate FB.login callback + WA_EMBEDDED_SIGNUP message event
     const signupDataRef = useRef(null);
+    const accessTokenRef = useRef(null);
+    const hasSentRef = useRef(false);
+    const sendTimerRef = useRef(null);
+
+    // Shared function: sends credentials to backend once both token + signup data are ready
+    const sendToBackend = () => {
+        if (hasSentRef.current) return;
+        const token = accessTokenRef.current;
+        if (!token) return; // Token not available yet
+
+        hasSentRef.current = true;
+        if (sendTimerRef.current) clearTimeout(sendTimerRef.current);
+
+        const data = signupDataRef.current;
+        console.log('[WhatsAppConnect] Sending to backend:', {
+            hasToken: !!token,
+            waba_id: data?.waba_id,
+            phone_number_id: data?.phone_number_id || data?.phone_id
+        });
+
+        setConnectionStatus({ type: 'success', message: 'Processing connection...' });
+
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/whatsapp/connect`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                access_token: token,
+                waba_id: data?.waba_id,
+                phone_number_id: data?.phone_number_id || data?.phone_id
+            })
+        })
+            .then(resp => {
+                console.log('Response status:', resp.status);
+                return resp.json();
+            })
+            .then(result => {
+                console.log('Response data:', result);
+                if (result.success) {
+                    setConnectionStatus({
+                        type: 'success',
+                        message: `Successfully connected! Phone: ${result.data.phone_number || 'Connected'}`
+                    });
+                } else {
+                    setConnectionStatus({
+                        type: 'error',
+                        message: result.message || result.error || 'Failed to connect. Please try again.'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Backend connection error:', error);
+                setConnectionStatus({
+                    type: 'error',
+                    message: 'Failed to save connection. Please try again.'
+                });
+            });
+    };
 
     useEffect(() => {
         // Load Facebook SDK
@@ -56,7 +119,6 @@ const WhatsAppConnect = () => {
                     if (data.event === 'CANCEL') {
                         // User abandoned the flow or reported an error
                         if (data.data.error_message) {
-                            // User reported an error
                             console.error('User reported error:', {
                                 message: data.data.error_message,
                                 error_id: data.data.error_id,
@@ -68,7 +130,6 @@ const WhatsAppConnect = () => {
                                 message: `Setup error: ${data.data.error_message}. Error ID: ${data.data.error_id}`
                             });
                         } else if (data.data.current_step) {
-                            // User abandoned the flow at a specific step
                             console.log('User abandoned flow at step:', data.data.current_step);
                             setConnectionStatus({
                                 type: 'error',
@@ -81,30 +142,30 @@ const WhatsAppConnect = () => {
                             });
                         }
                     } else if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
-                        // Successful flow completion
+                        // Successful flow completion — store signup data
                         console.log('Flow completed successfully:', data.event);
 
-                        // Store the signup data (waba_id, phone_number_id, etc)
                         if (data.data) {
                             const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
                             signupDataRef.current = merged;
                             setSignupData(merged);
+                            console.log('[WhatsAppConnect] Stored signup data:', merged);
                         }
 
-                        // Set appropriate success message based on event type
-                        let message = 'WhatsApp connection initiated successfully!';
+                        // Set appropriate success message
+                        let message = 'WhatsApp signup completed! Finishing connection...';
                         if (data.event === 'FINISH_ONLY_WABA') {
                             message = 'WhatsApp Business Account connected (phone number setup pending).';
                         } else if (data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
                             message = 'WhatsApp Business App number connected successfully!';
                         }
+                        setConnectionStatus({ type: 'success', message });
 
-                        setConnectionStatus({
-                            type: 'success',
-                            message: message
-                        });
+                        // If token already available, send immediately
+                        if (accessTokenRef.current) {
+                            sendToBackend();
+                        }
                     } else {
-                        // Unknown event type - log and store data anyway
                         console.log('Unknown event type:', data.event);
                         if (data.data) {
                             const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
@@ -123,6 +184,7 @@ const WhatsAppConnect = () => {
 
         return () => {
             window.removeEventListener('message', handleMessage);
+            if (sendTimerRef.current) clearTimeout(sendTimerRef.current);
         };
     }, []);
 
@@ -136,9 +198,6 @@ const WhatsAppConnect = () => {
         if (response.authResponse) {
             const accessToken = response.authResponse.accessToken;
             console.log('Received Access Token:', accessToken ? 'Yes' : 'No');
-            // Read from ref for latest value (state may be stale due to async React updates)
-            const currentSignupData = signupDataRef.current;
-            console.log('Signup Data (from ref):', currentSignupData);
 
             if (!accessToken) {
                 console.error('Access Token not received');
@@ -149,50 +208,23 @@ const WhatsAppConnect = () => {
                 return;
             }
 
-            setConnectionStatus({
-                type: 'success',
-                message: 'Processing connection...'
-            });
+            // Store token in ref
+            accessTokenRef.current = accessToken;
 
-            // Send access token to backend (Embedded Signup flow)
-            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/whatsapp/connect`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    access_token: accessToken,
-                    waba_id: currentSignupData?.waba_id,
-                    phone_number_id: currentSignupData?.phone_number_id || currentSignupData?.phone_id
-                })
-            })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Response data:', data);
-                    if (data.success) {
-                        setConnectionStatus({
-                            type: 'success',
-                            message: `Successfully connected! Phone: ${data.data.phone_number || 'Connected'}`
-                        });
-                    } else {
-                        setConnectionStatus({
-                            type: 'error',
-                            message: data.message || data.error || 'Failed to connect. Please try again.'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Backend connection error:', error);
-                    setConnectionStatus({
-                        type: 'error',
-                        message: 'Failed to save connection. Please try again.'
-                    });
-                });
+            // If signup data already arrived via message event, send immediately
+            if (signupDataRef.current?.waba_id || signupDataRef.current?.phone_number_id) {
+                console.log('[WhatsAppConnect] Signup data already available, sending immediately');
+                sendToBackend();
+            } else {
+                // Wait up to 3s for WA_EMBEDDED_SIGNUP message, then send anyway
+                // (backend will auto-discover via debug_token as fallback)
+                console.log('[WhatsAppConnect] Waiting up to 3s for signup data from message event...');
+                setConnectionStatus({ type: 'success', message: 'Finishing setup, please wait...' });
+                sendTimerRef.current = setTimeout(() => {
+                    console.log('[WhatsAppConnect] Timeout - sending with available data');
+                    sendToBackend();
+                }, 3000);
+            }
         } else {
             console.warn('No auth response received');
             console.log('Response Status:', response.status);

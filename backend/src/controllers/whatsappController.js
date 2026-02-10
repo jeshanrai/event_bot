@@ -121,7 +121,7 @@ const connectWhatsApp = async (req, res) => {
                     `https://graph.facebook.com/v24.0/${providedPhoneId}`,
                     {
                         params: {
-                            fields: 'id,verified_name,display_phone_number,quality_rating',
+                            fields: 'id,display_phone_number,quality_rating',
                             access_token
                         }
                     }
@@ -140,7 +140,10 @@ const connectWhatsApp = async (req, res) => {
                 const phoneResponse = await axios.get(
                     `https://graph.facebook.com/v24.0/${wabaId}/phone_numbers`,
                     {
-                        params: { access_token }
+                        params: {
+                            fields: 'id,display_phone_number,quality_rating',
+                            access_token
+                        }
                     }
                 );
                 phoneData = phoneResponse.data.data?.[0] || {};
@@ -184,7 +187,7 @@ const connectWhatsApp = async (req, res) => {
             phone_number_id: phoneData.id,
             whatsapp_business_account_id: wabaId || null,
             expires_at: expiresAt,
-            phone_number: phoneData.verified_name || null,
+            phone_number: phoneData.display_phone_number || null,
             display_phone_number: phoneData.display_phone_number || null,
             quality_rating: phoneData.quality_rating || null,
             status: 'active'

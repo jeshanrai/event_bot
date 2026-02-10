@@ -9,13 +9,73 @@ const ConnectHub = () => {
     const [whatsappStatus, setWhatsappStatus] = useState(null);
     const [facebookStatus, setFacebookStatus] = useState(null);
     const [signupData, setSignupData] = useState(null);
+
+    // Refs to coordinate FB.login callback + WA_EMBEDDED_SIGNUP message event
     const signupDataRef = useRef(null);
+    const accessTokenRef = useRef(null);
+    const hasSentRef = useRef(false);
+    const sendTimerRef = useRef(null);
 
     // Persistent connection data fetched from backend
     const [connectionData, setConnectionData] = useState({
         whatsapp: { connected: false, data: null },
         facebook: { connected: false, data: null }
     });
+
+    // Shared function: sends WhatsApp credentials to backend once token + signup data are ready
+    const sendWhatsAppToBackend = () => {
+        if (hasSentRef.current) return;
+        const token = accessTokenRef.current;
+        if (!token) return;
+
+        hasSentRef.current = true;
+        if (sendTimerRef.current) clearTimeout(sendTimerRef.current);
+
+        const data = signupDataRef.current;
+        console.log('[ConnectHub] Sending to backend:', {
+            hasToken: !!token,
+            waba_id: data?.waba_id,
+            phone_number_id: data?.phone_number_id || data?.phone_id
+        });
+
+        setWhatsappStatus({ type: 'success', message: 'Processing connection...' });
+
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/whatsapp/connect`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                access_token: token,
+                waba_id: data?.waba_id,
+                phone_number_id: data?.phone_number_id || data?.phone_id
+            })
+        })
+            .then(resp => resp.json())
+            .then(result => {
+                if (result.success) {
+                    setWhatsappStatus({
+                        type: 'success',
+                        message: `Successfully connected! Phone: ${result.data.phone_number || 'Connected'}`
+                    });
+                    fetchStatus();
+                } else {
+                    setWhatsappStatus({
+                        type: 'error',
+                        message: result.message || result.error || 'Failed to connect. Please try again.'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Backend connection error:', error);
+                setWhatsappStatus({
+                    type: 'error',
+                    message: 'Failed to save connection. Please try again.'
+                });
+            });
+    };
 
     const fetchStatus = async () => {
         try {
@@ -82,13 +142,11 @@ const ConnectHub = () => {
 
         // Session logging message event listener for WhatsApp Embedded Signup
         const handleMessage = (event) => {
-            // Only process messages from Facebook
             if (event.origin !== 'https://www.facebook.com' && !event.origin.endsWith('facebook.com')) return;
 
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === 'WA_EMBEDDED_SIGNUP') {
-                    // Handle different event types
                     if (data.event === 'CANCEL') {
                         setWhatsappStatus({
                             type: 'error',
@@ -97,25 +155,25 @@ const ConnectHub = () => {
                                 : 'Setup cancelled. Please try again.'
                         });
                     } else if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
-                        // Successful flow completion - store signup data
+                        // Store signup data
                         if (data.data) {
                             const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
                             signupDataRef.current = merged;
                             setSignupData(merged);
+                            console.log('[ConnectHub] Stored signup data:', merged);
                         }
 
-                        // Set success message based on event type
-                        let message = 'WhatsApp connection initiated successfully!';
+                        let message = 'WhatsApp signup completed! Finishing connection...';
                         if (data.event === 'FINISH_ONLY_WABA') {
                             message = 'WhatsApp Business Account connected (phone number setup pending).';
                         }
+                        setWhatsappStatus({ type: 'success', message });
 
-                        setWhatsappStatus({
-                            type: 'success',
-                            message: message
-                        });
+                        // If token already available, send immediately
+                        if (accessTokenRef.current) {
+                            sendWhatsAppToBackend();
+                        }
                     } else {
-                        // Unknown event type - log and store data anyway
                         if (data.data) {
                             const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
                             signupDataRef.current = merged;
@@ -132,6 +190,7 @@ const ConnectHub = () => {
 
         return () => {
             window.removeEventListener('message', handleMessage);
+            if (sendTimerRef.current) clearTimeout(sendTimerRef.current);
         };
     }, []);
 
@@ -139,9 +198,6 @@ const ConnectHub = () => {
     const whatsappLoginCallback = (response) => {
         if (response.authResponse) {
             const accessToken = response.authResponse.accessToken;
-            // Read from ref for latest value (state may be stale due to async React updates)
-            const currentSignupData = signupDataRef.current;
-            console.log('Signup Data (from ref):', currentSignupData);
 
             if (!accessToken) {
                 setWhatsappStatus({
@@ -151,47 +207,22 @@ const ConnectHub = () => {
                 return;
             }
 
-            setWhatsappStatus({
-                type: 'success',
-                message: 'Processing connection...'
-            });
+            // Store token in ref
+            accessTokenRef.current = accessToken;
 
-            // Send access token to backend (Embedded Signup flow)
-            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/whatsapp/connect`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    access_token: accessToken,
-                    waba_id: currentSignupData?.waba_id,
-                    phone_number_id: currentSignupData?.phone_number_id || currentSignupData?.phone_id
-                })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        setWhatsappStatus({
-                            type: 'success',
-                            message: `Successfully connected! Phone: ${data.data.phone_number || 'Connected'}`
-                        });
-                        fetchStatus(); // Refresh status
-                    } else {
-                        setWhatsappStatus({
-                            type: 'error',
-                            message: data.message || data.error || 'Failed to connect. Please try again.'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Backend connection error:', error);
-                    setWhatsappStatus({
-                        type: 'error',
-                        message: 'Failed to save connection. Please try again.'
-                    });
-                });
+            // If signup data already arrived via message event, send immediately
+            if (signupDataRef.current?.waba_id || signupDataRef.current?.phone_number_id) {
+                console.log('[ConnectHub] Signup data already available, sending immediately');
+                sendWhatsAppToBackend();
+            } else {
+                // Wait up to 3s for WA_EMBEDDED_SIGNUP message, then send anyway
+                console.log('[ConnectHub] Waiting up to 3s for signup data from message event...');
+                setWhatsappStatus({ type: 'success', message: 'Finishing setup, please wait...' });
+                sendTimerRef.current = setTimeout(() => {
+                    console.log('[ConnectHub] Timeout - sending with available data');
+                    sendWhatsAppToBackend();
+                }, 3000);
+            }
         } else {
             setWhatsappStatus({
                 type: 'error',
