@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { MessageCircle, CheckCircle, AlertCircle } from 'lucide-react';
 import './OwnerDashboard.css';
 
@@ -6,6 +6,7 @@ const WhatsAppConnect = () => {
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [signupData, setSignupData] = useState(null);
+    const signupDataRef = useRef(null);
 
     useEffect(() => {
         // Load Facebook SDK
@@ -85,7 +86,9 @@ const WhatsAppConnect = () => {
 
                         // Store the signup data (waba_id, phone_number_id, etc)
                         if (data.data) {
-                            setSignupData(prev => ({ ...prev, ...data.data, event_type: data.event }));
+                            const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
+                            signupDataRef.current = merged;
+                            setSignupData(merged);
                         }
 
                         // Set appropriate success message based on event type
@@ -104,7 +107,9 @@ const WhatsAppConnect = () => {
                         // Unknown event type - log and store data anyway
                         console.log('Unknown event type:', data.event);
                         if (data.data) {
-                            setSignupData(prev => ({ ...prev, ...data.data, event_type: data.event }));
+                            const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
+                            signupDataRef.current = merged;
+                            setSignupData(merged);
                         }
                     }
                 }
@@ -131,7 +136,9 @@ const WhatsAppConnect = () => {
         if (response.authResponse) {
             const accessToken = response.authResponse.accessToken;
             console.log('Received Access Token:', accessToken ? 'Yes' : 'No');
-            console.log('Signup Data:', signupData);
+            // Read from ref for latest value (state may be stale due to async React updates)
+            const currentSignupData = signupDataRef.current;
+            console.log('Signup Data (from ref):', currentSignupData);
 
             if (!accessToken) {
                 console.error('Access Token not received');
@@ -157,8 +164,8 @@ const WhatsAppConnect = () => {
                 credentials: 'include',
                 body: JSON.stringify({
                     access_token: accessToken,
-                    waba_id: signupData?.waba_id,
-                    phone_number_id: signupData?.phone_number_id || signupData?.phone_id
+                    waba_id: currentSignupData?.waba_id,
+                    phone_number_id: currentSignupData?.phone_number_id || currentSignupData?.phone_id
                 })
             })
                 .then(response => {

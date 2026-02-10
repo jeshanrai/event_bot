@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { MessageCircle, CheckCircle, AlertCircle, Facebook } from 'lucide-react';
 import './OwnerDashboard.css';
 
@@ -9,6 +9,7 @@ const ConnectHub = () => {
     const [whatsappStatus, setWhatsappStatus] = useState(null);
     const [facebookStatus, setFacebookStatus] = useState(null);
     const [signupData, setSignupData] = useState(null);
+    const signupDataRef = useRef(null);
 
     // Persistent connection data fetched from backend
     const [connectionData, setConnectionData] = useState({
@@ -98,7 +99,9 @@ const ConnectHub = () => {
                     } else if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
                         // Successful flow completion - store signup data
                         if (data.data) {
-                            setSignupData(prev => ({ ...prev, ...data.data, event_type: data.event }));
+                            const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
+                            signupDataRef.current = merged;
+                            setSignupData(merged);
                         }
 
                         // Set success message based on event type
@@ -114,7 +117,9 @@ const ConnectHub = () => {
                     } else {
                         // Unknown event type - log and store data anyway
                         if (data.data) {
-                            setSignupData(prev => ({ ...prev, ...data.data, event_type: data.event }));
+                            const merged = { ...signupDataRef.current, ...data.data, event_type: data.event };
+                            signupDataRef.current = merged;
+                            setSignupData(merged);
                         }
                     }
                 }
@@ -134,6 +139,9 @@ const ConnectHub = () => {
     const whatsappLoginCallback = (response) => {
         if (response.authResponse) {
             const accessToken = response.authResponse.accessToken;
+            // Read from ref for latest value (state may be stale due to async React updates)
+            const currentSignupData = signupDataRef.current;
+            console.log('Signup Data (from ref):', currentSignupData);
 
             if (!accessToken) {
                 setWhatsappStatus({
@@ -158,8 +166,8 @@ const ConnectHub = () => {
                 credentials: 'include',
                 body: JSON.stringify({
                     access_token: accessToken,
-                    waba_id: signupData?.waba_id,
-                    phone_number_id: signupData?.phone_number_id || signupData?.phone_id
+                    waba_id: currentSignupData?.waba_id,
+                    phone_number_id: currentSignupData?.phone_number_id || currentSignupData?.phone_id
                 })
             })
                 .then(response => response.json())
