@@ -147,7 +147,7 @@ const TenantResolver = {
       const res = await db.query(
         `SELECT phone_number_id, access_token 
                  FROM whatsapp_credentials 
-                 WHERE (phone_number_id = $1 OR restaurant_id = $1) 
+                 WHERE (phone_number_id = $1 OR restaurant_id::text = $1) 
                    AND is_active = true 
                  LIMIT 1`,
         [lookupKey],
