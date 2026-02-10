@@ -6,7 +6,10 @@ const connectWhatsApp = async (req, res) => {
     try {
         const { access_token: shortLivedToken } = req.body;
         const userId = req.user.id; // From auth middleware
-        const restaurantId = req.user.restaurant_id; // Restaurant ID from logged-in user
+        // DEBUG: Log restaurant ID resolution
+        console.log('Resolving Restaurant ID. Body:', req.body.restaurant_id, 'User:', req.user.restaurant_id);
+        const restaurantId = req.body.restaurant_id || req.user.restaurant_id; // Restaurant ID from body (priority) or user
+        console.log('Final Restaurant ID to use:', restaurantId);
 
         if (!shortLivedToken) {
             return res.status(400).json({

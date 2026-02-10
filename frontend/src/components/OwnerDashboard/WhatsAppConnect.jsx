@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MessageCircle, CheckCircle, AlertCircle } from 'lucide-react';
+import useAuth from '../../hooks/useAuth';
 import './OwnerDashboard.css';
 
 const WhatsAppConnect = () => {
+    const { user } = useAuth(); // Get user context for restaurant_id
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [signupData, setSignupData] = useState(null);
@@ -26,7 +28,8 @@ const WhatsAppConnect = () => {
         console.log('[WhatsAppConnect] Sending to backend:', {
             hasToken: !!token,
             waba_id: data?.waba_id,
-            phone_number_id: data?.phone_number_id || data?.phone_id
+            phone_number_id: data?.phone_number_id || data?.phone_id,
+            restaurant_id: user?.restaurant_id // Log this
         });
 
         setConnectionStatus({ type: 'success', message: 'Processing connection...' });
@@ -41,7 +44,8 @@ const WhatsAppConnect = () => {
             body: JSON.stringify({
                 access_token: token,
                 waba_id: data?.waba_id,
-                phone_number_id: data?.phone_number_id || data?.phone_id
+                phone_number_id: data?.phone_number_id || data?.phone_id,
+                restaurant_id: user?.restaurant_id // Explicitly send restaurant_id
             })
         })
             .then(resp => {

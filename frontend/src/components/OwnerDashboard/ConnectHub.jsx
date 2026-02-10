@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MessageCircle, CheckCircle, AlertCircle, Facebook } from 'lucide-react';
+import useAuth from '../../hooks/useAuth';
 import './OwnerDashboard.css';
 
 const ConnectHub = () => {
+    const { user } = useAuth(); // Get user context
     const [activeTab, setActiveTab] = useState('whatsapp');
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
     // These status states are for immediate feedback (success/error messages)
@@ -35,7 +37,8 @@ const ConnectHub = () => {
         console.log('[ConnectHub] Sending to backend:', {
             hasToken: !!token,
             waba_id: data?.waba_id,
-            phone_number_id: data?.phone_number_id || data?.phone_id
+            phone_number_id: data?.phone_number_id || data?.phone_id,
+            restaurant_id: user?.restaurant_id
         });
 
         setWhatsappStatus({ type: 'success', message: 'Processing connection...' });
@@ -50,7 +53,8 @@ const ConnectHub = () => {
             body: JSON.stringify({
                 access_token: token,
                 waba_id: data?.waba_id,
-                phone_number_id: data?.phone_number_id || data?.phone_id
+                phone_number_id: data?.phone_number_id || data?.phone_id,
+                restaurant_id: user?.restaurant_id // Explicitly send restaurant_id
             })
         })
             .then(resp => resp.json())

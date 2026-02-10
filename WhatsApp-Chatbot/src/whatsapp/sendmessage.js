@@ -1,6 +1,5 @@
 import fetch from "node-fetch";
 import TenantResolver from "../utils/tenant.js";
-import { momoImages } from "../assets/momoImages.js";
 
 function logFinalResponse(to, type, content) {
   console.log("\n✅ [FINAL RESPONSE MESSAGE]");

@@ -13,6 +13,7 @@ const getUserProfile = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        restaurant_id: user.restaurant_id, // Expose restaurant_id
         created_at: user.created_at,
       });
     } else {

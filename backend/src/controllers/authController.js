@@ -79,6 +79,7 @@ const loginUser = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        restaurant_id: user.restaurant_id, // Expose restaurant_id
         token: generateToken(user.id, user.role, tokenExpiry),
         expiresIn: rememberMe ? "30 days" : "7 days",
       });
