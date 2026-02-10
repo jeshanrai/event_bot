@@ -12,7 +12,7 @@ import { AI_CONFIG } from './config.js';
 export async function generateToolResponse(toolName, args, result, userContext) {
     try {
         const prompt = `
-    You are a friendly restaurant waiter AI at Momo House.
+    You are a friendly restaurant waiter AI at ${userContext.restaurantName || "our restaurant"}.
     
     CONTEXT:
     Tool Executed: ${toolName}

@@ -8,7 +8,9 @@ import { logLLMCall } from '../utils/logLLMUsage.js';
  * Takes user message text and conversation context, returns tool call decision
  */
 export async function detectIntentAndRespond(userMessage, conversationContext = {}) {
-  const systemPrompt = SYSTEM_PROMPT.replace('{{CONTEXT_STATE}}', JSON.stringify(conversationContext));
+  const systemPrompt = SYSTEM_PROMPT
+    .replace('{{CONTEXT_STATE}}', JSON.stringify(conversationContext))
+    .replace('{{RESTAURANT_NAME}}', conversationContext.restaurantName || 'our restaurant');
 
   const messages = [
     { role: "system", content: systemPrompt },
@@ -127,18 +129,18 @@ export async function detectIntentAndRespond(userMessage, conversationContext = 
 
   } catch (err) {
     console.error('Intent detection error:', err);
-    
+
     // Special handling for tool_use_failed errors
     if (err.status === 400 && err.error?.code === 'tool_use_failed') {
       console.warn('Tool use failed from Groq API, providing fallback...');
-      
+
       // Extract context from the conversation
       const { stage } = conversationContext || {};
       const msgLower = userMessage.toLowerCase();
-      
+
       // Heuristic handling for common confirmation scenarios
-      if ((stage === 'confirming_order' || stage === 'confirming_deposit') && 
-          (msgLower.includes('confirm') || msgLower.includes('yes') || msgLower.includes('ok'))) {
+      if ((stage === 'confirming_order' || stage === 'confirming_deposit') &&
+        (msgLower.includes('confirm') || msgLower.includes('yes') || msgLower.includes('ok'))) {
         return {
           intent: "process_order_response",
           toolCall: {
@@ -148,7 +150,7 @@ export async function detectIntentAndRespond(userMessage, conversationContext = 
           response: ""
         };
       }
-      
+
       if (msgLower.includes('cancel') || msgLower.includes('no')) {
         return {
           intent: "process_order_response",
@@ -160,7 +162,7 @@ export async function detectIntentAndRespond(userMessage, conversationContext = 
         };
       }
     }
-    
+
     return {
       intent: "send_text_reply",
       toolCall: {

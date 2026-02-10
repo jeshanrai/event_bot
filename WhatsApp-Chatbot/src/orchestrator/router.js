@@ -66,7 +66,7 @@ const toolHandlers = {
         context.platform,
         "🍽️ Restaurant Menu",
         "Tap the button below to browse our delicious menu and add items to your cart.",
-        "Momo House",
+        context.restaurantName || "Our Restaurant",
         "View Menu 📋",
         menuUrl,
         { businessId: context.businessId },
@@ -1105,7 +1105,7 @@ const toolHandlers = {
     await sendMessage(
       userId,
       context.platform,
-      "✅ Order Confirmed! Please pay cash at the counter.\n\nThank you for choosing Momo House! 🥟",
+      `✅ Order Confirmed! Please pay cash at the counter.\n\nThank you for choosing ${context.restaurantName || "our restaurant"}! 🥟`,
       { businessId: context.businessId },
     );
 
@@ -1222,7 +1222,7 @@ const toolHandlers = {
     await sendCtaUrlMessage(
       userId,
       context.platform,
-      "👋 Welcome to Momo House!",
+      `👋 Welcome to ${context.restaurantName || "our restaurant"}!`,
       "We serve the best foods in town. \n\nTap the button below to browse our full menu and place your order directly!",
       "Delicious & Fast 🥟",
       "View Menu 📋",

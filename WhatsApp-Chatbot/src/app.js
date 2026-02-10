@@ -108,10 +108,18 @@ app.post(
             console.log(
               `📤 Sending payment confirmation to ${userId} on ${platform} (Restaurant: ${restaurantId || "default"})`,
             );
+
+            // Fetch restaurant name dynamically
+            const restResult = await db.query(
+              "SELECT name FROM restaurants WHERE id = $1",
+              [restaurantId || 1],
+            );
+            const restaurantName = restResult.rows[0]?.name || "our restaurant";
+
             await sendMessage(
               userId,
               platform,
-              `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: AUD ${orderTotal.toFixed(2)}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing Momo House! 🥟`,
+              `✅ Payment Received!\n\n📋 Order Number: #${orderNumber}\n\n🍽️ Your Order:\n${orderItemsText}\n\n💰 Total: AUD ${orderTotal.toFixed(2)}\n\nYour order has been confirmed. We'll start preparing your food right away! 👨‍🍳\n\nThank you for choosing ${restaurantName}! 🥟`,
               { businessId: restaurantId },
             );
 
@@ -277,7 +285,14 @@ app.get("/api/menu", async (req, res) => {
       }
     }
 
-    res.json({ success: true, items });
+    // Fetch restaurant details
+    const restaurantRes = await db.query(
+      "SELECT id, name, address, contact_number, currency FROM restaurants WHERE id = $1",
+      [targetRestaurantId]
+    );
+    const restaurant = restaurantRes.rows[0] || null;
+
+    res.json({ success: true, items, restaurant });
   } catch (error) {
     console.error("Error fetching menu:", error);
     res.status(500).json({ success: false, error: "Failed to fetch menu" });

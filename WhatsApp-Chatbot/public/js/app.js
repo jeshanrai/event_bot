@@ -23,7 +23,7 @@ async function initializeApp() {
     console.log('Restaurant ID:', state.restaurantId);
 
     await loadMenuData();
-    loadRestaurantInfo(); // Load restaurant name for header (non-blocking)
+    // loadRestaurantInfo(); // Removed: Restaurant info is now loaded with menu data
     await loadUserCart(); // Load user's session cart
     setupEventListeners();
     renderCategories(); // This will now use data from the backend if possible, or derive from items
@@ -63,8 +63,25 @@ async function loadMenuData() {
         const res = await fetch(`/api/menu?all=true${restaurantIdParam}`);
         const data = await res.json();
 
-        if (data.success && Array.isArray(data.items)) {
-            state.menuData = data.items;
+        if (data.success) {
+            if (Array.isArray(data.items)) {
+                state.menuData = data.items;
+            }
+
+            // Handle Restaurant Info
+            if (data.restaurant) {
+                const nameEl = document.getElementById('restaurant-name');
+                const subtitleEl = document.getElementById('restaurant-subtitle');
+
+                if (nameEl) nameEl.textContent = data.restaurant.name;
+                if (subtitleEl && data.restaurant.address) {
+                    subtitleEl.textContent = data.restaurant.address;
+                }
+
+                // Update page title
+                document.title = `${data.restaurant.name} - Menu`;
+            }
+
         } else {
             console.error('Failed to load menu data', data);
             showToast('Failed to load menu', 'error');
@@ -75,31 +92,12 @@ async function loadMenuData() {
     }
 }
 
+/* 
+// Deprecated: Merged into loadMenuData
 async function loadRestaurantInfo() {
-    const restaurantId = state.restaurantId || 1;
-    try {
-        const res = await fetch(`/api/restaurant/${restaurantId}`);
-        const data = await res.json();
-
-        if (data.success && data.restaurant) {
-            const nameEl = document.getElementById('restaurant-name');
-            const subtitleEl = document.getElementById('restaurant-subtitle');
-
-            if (nameEl) nameEl.textContent = data.restaurant.name;
-            if (subtitleEl && data.restaurant.address) {
-                subtitleEl.textContent = data.restaurant.address;
-            }
-
-            // Update page title
-            document.title = `${data.restaurant.name} - Menu`;
-        }
-    } catch (error) {
-        console.error('Error loading restaurant info:', error);
-        // Fallback - keep the "Loading..." text or set generic
-        const nameEl = document.getElementById('restaurant-name');
-        if (nameEl) nameEl.textContent = 'Menu';
-    }
+    ...
 }
+*/
 
 function hideLoading() {
     const loadingEl = document.getElementById('menu-loading');

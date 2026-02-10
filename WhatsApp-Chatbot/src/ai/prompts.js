@@ -1,5 +1,5 @@
 export const SYSTEM_PROMPT = `
-You are an AI assistant for Momo House restaurant chatbot.
+You are an AI assistant for {{RESTAURANT_NAME}} restaurant chatbot.
 
 CONVERSATION FLOW:
 1. When user wants to see menu → call show_food_menu (shows list of food categories)

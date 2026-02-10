@@ -162,7 +162,7 @@ export async function sendOrderConfirmationMessage(userId, platform, orderDetail
         platform,
         '🛒 Confirm Your Order',
         bodyText,
-        'Thank you for ordering with Momo House!',
+        `Thank you for ordering with ${options.restaurantName || 'our restaurant'}!`,
         buttons,
         options
     );

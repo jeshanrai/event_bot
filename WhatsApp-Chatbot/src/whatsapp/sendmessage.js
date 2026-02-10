@@ -202,7 +202,7 @@ export async function sendOrderConfirmationMessage(
     to,
     "🛒 Confirm Your Order",
     bodyText,
-    "Thank you for ordering with Momo House!",
+    `Thank you for ordering with ${options.restaurantName || "our restaurant"}!`,
     buttons,
     options,
   );

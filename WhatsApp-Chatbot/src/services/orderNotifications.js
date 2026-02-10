@@ -21,11 +21,13 @@ export async function sendOrderConfirmationWithTime(
         o.estimated_ready_time,
         o.total_amount,
         o.status,
+        r.name as restaurant_name,
         COUNT(oi.id) as item_count
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN restaurants r ON o.restaurant_id = r.id
       WHERE o.id = $1
-      GROUP BY o.id
+      GROUP BY o.id, r.name
     `,
       [orderId],
     );
@@ -62,7 +64,7 @@ export async function sendOrderConfirmationWithTime(
 
     message += `👨‍🍳 Our kitchen is preparing your order!\n`;
     message += `📱 We'll notify you when it's ready.\n\n`;
-    message += `Thank you for choosing Momo House! 🥟`;
+    message += `Thank you for choosing ${order.restaurant_name || "our restaurant"}! 🥟`;
 
     await sendMessage(userId, platform, message, { businessId });
 
@@ -180,24 +182,25 @@ export async function sendThankYouMessage(
   platform,
   businessId,
   reason = "general",
+  restaurantName = "our restaurant",
 ) {
   try {
     let message = "";
 
     if (reason === "underage") {
       message =
-        `Thank you for your interest in Momo House! 🥟\n\n` +
+        `Thank you for your interest in ${restaurantName}! \n\n` +
         `Unfortunately, we can only serve customers who are 18 years or older due to our alcohol offerings.\n\n` +
         `We appreciate your understanding. Have a wonderful day! 🌟`;
     } else if (reason === "order_complete") {
       message =
-        `Thank you for ordering with Momo House! 🙏\n\n` +
-        `We hope you enjoyed your meal! 🥟✨\n\n` +
+        `Thank you for ordering with ${restaurantName}! 🙏\n\n` +
+        `We hope you enjoyed your meal! ✨\n\n` +
         `We'd love to see you again soon. Have a great day! 🌟`;
     } else {
       message =
-        `Thank you for visiting Momo House! 🙏\n\n` +
-        `We hope to serve you soon! 🥟\n\n` +
+        `Thank you for visiting ${restaurantName}! 🙏\n\n` +
+        `We hope to serve you soon! \n\n` +
         `Have a wonderful day! 🌟`;
     }
 
@@ -270,6 +273,13 @@ export async function processOrderStatusChange(
       }
     }
 
+    // Fetch restaurant name for dynamic messages
+    const restResult = await db.query(
+      "SELECT name FROM restaurants WHERE id = $1",
+      [restaurantId],
+    );
+    const restaurantName = restResult.rows[0]?.name || "our restaurant";
+
     // Send appropriate notification based on new status
     if (newStatus === "preparing") {
       await sendOrderPreparingNotification(
@@ -282,7 +292,7 @@ export async function processOrderStatusChange(
       await sendOrderReadyNotification(orderId, userId, platform, businessId);
     } else if (newStatus === "delivered") {
       // Order picked up/completed - optional thank you message
-      await sendThankYouMessage(userId, platform, businessId, "order_complete");
+      await sendThankYouMessage(userId, platform, businessId, "order_complete", restaurantName);
     }
 
     console.log(`✅ Order ${orderId} status changed to: ${newStatus}`);
