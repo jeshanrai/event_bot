@@ -32,10 +32,51 @@ const connectWhatsApp = async (req, res) => {
         token_expires_in = exchangeResponse.data.expires_in;
         console.log('Successfully exchanged for long-lived token');
 
-        const wabaId = req.body.waba_id;
-        const providedPhoneId = req.body.phone_number_id;
+        let wabaId = req.body.waba_id;
+        let providedPhoneId = req.body.phone_number_id;
 
         console.log('Received from frontend - WABA ID:', wabaId, 'Phone ID:', providedPhoneId);
+
+        // AUTO-DISCOVERY: If WABA/Phone not provided by frontend (race condition),
+        // use debug_token API to extract them from the token's granular_scopes
+        if (!wabaId || !providedPhoneId) {
+            console.log('WABA/Phone not provided by frontend - attempting auto-discovery via debug_token...');
+            try {
+                const appId = process.env.FACEBOOK_APP_ID;
+                const appSecret = process.env.FACEBOOK_APP_SECRET;
+                const appToken = `${appId}|${appSecret}`;
+
+                const debugResponse = await axios.get('https://graph.facebook.com/v24.0/debug_token', {
+                    params: {
+                        input_token: access_token,
+                        access_token: appToken
+                    }
+                });
+
+                const debugData = debugResponse.data?.data;
+                console.log('debug_token response scopes:', JSON.stringify(debugData?.granular_scopes));
+
+                if (debugData?.granular_scopes) {
+                    for (const scope of debugData.granular_scopes) {
+                        if (scope.scope === 'whatsapp_business_management' && scope.target_ids?.length > 0) {
+                            if (!wabaId) {
+                                wabaId = scope.target_ids[0];
+                                console.log('✅ Auto-discovered WABA ID:', wabaId);
+                            }
+                        }
+                        if (scope.scope === 'whatsapp_business_messaging' && scope.target_ids?.length > 0) {
+                            if (!providedPhoneId) {
+                                providedPhoneId = scope.target_ids[0];
+                                console.log('✅ Auto-discovered Phone Number ID:', providedPhoneId);
+                            }
+                        }
+                    }
+                }
+            } catch (debugErr) {
+                console.warn('debug_token auto-discovery failed:', debugErr.response?.data || debugErr.message);
+                // Continue — will fall through to pending_signup if still missing
+            }
+        }
 
         // Calculate token expiration from API response or default to 60 days
         const expiresAt = new Date();
@@ -45,10 +86,9 @@ const connectWhatsApp = async (req, res) => {
             expiresAt.setDate(expiresAt.getDate() + 60);
         }
 
-        // If WABA/Phone not provided, save token with PENDING status
-        // This allows users to complete signup later
+        // If WABA/Phone STILL not available after auto-discovery, save with PENDING status
         if (!wabaId && !providedPhoneId) {
-            console.log('WABA/Phone not provided - saving token with PENDING status');
+            console.log('WABA/Phone not available even after auto-discovery - saving token with PENDING status');
 
             const credentials = await WhatsAppCredentials.upsert(userId, restaurantId, {
                 access_token,
