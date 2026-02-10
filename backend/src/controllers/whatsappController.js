@@ -150,6 +150,22 @@ const connectWhatsApp = async (req, res) => {
             }
         }
 
+        // SUGGESTED FIX: Subscribe WABA to the App to ensure webhooks are received
+        if (wabaId) {
+            try {
+                console.log(`Subscribing WABA ${wabaId} to the App...`);
+                await axios.post(
+                    `https://graph.facebook.com/v24.0/${wabaId}/subscribed_apps`,
+                    {},
+                    { params: { access_token } }
+                );
+                console.log('✅ WABA subscribed to app webhooks successfully');
+            } catch (subErr) {
+                console.error('❌ Failed to subscribe WABA to app:', subErr.response?.data || subErr.message);
+                // Continue - don't block connection, but warn
+            }
+        }
+
         // If still no phone data, save with what we have
         if (!phoneData.id && wabaId) {
             console.log('No phone number found, saving with WABA only');
