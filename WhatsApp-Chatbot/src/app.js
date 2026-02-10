@@ -221,6 +221,26 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 // Stripe webhook uses express.raw() so it won't be affected
 app.use(express.json());
 
+// API: Get restaurant info
+app.get("/api/restaurant/:id", async (req, res) => {
+  try {
+    const restaurantId = parseInt(req.params.id) || 1;
+    const result = await db.query(
+      "SELECT id, name, address, contact_number FROM restaurants WHERE id = $1",
+      [restaurantId],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Restaurant not found" });
+    }
+
+    res.json({ success: true, restaurant: result.rows[0] });
+  } catch (error) {
+    console.error("Error fetching restaurant:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch restaurant" });
+  }
+});
+
 // API: Get menu items or categories
 app.get("/api/menu", async (req, res) => {
   try {
