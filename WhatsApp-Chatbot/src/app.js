@@ -11,6 +11,7 @@ import { sendMessage, sendButtonMessage } from "./services/response.js";
 import { updateContext, getContext } from "./orchestrator/context.js";
 import * as restaurantTools from "./tools/restaurant.tools.js";
 import { processOrderStatusChange } from "./services/orderNotifications.js";
+import TenantResolver from "./utils/tenant.js";
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -901,6 +902,26 @@ app.post("/webhook", async (req, res) => {
     const value = change?.value;
     const messages = value?.messages;
 
+    // Resolve Tenant for Multi-tenant support
+    const phoneNumberId = value?.metadata?.phone_number_id;
+    let restaurantId = null;
+    let restaurantName = "Unknown";
+
+    if (phoneNumberId) {
+      const tenant = await TenantResolver.resolveWhatsAppTenant(phoneNumberId);
+      if (tenant) {
+        restaurantId = tenant.id;
+        restaurantName = tenant.name;
+        console.log(
+          `🏢 [LEGACY] Tenant Resolved: ${restaurantName} (ID: ${restaurantId})`,
+        );
+      } else {
+        console.warn(
+          `⚠️ [LEGACY] No tenant found for Phone Number ID: ${phoneNumberId}.`,
+        );
+      }
+    }
+
     if (Array.isArray(messages)) {
       for (const message of messages) {
         const userId = message.from;
@@ -915,6 +936,9 @@ app.post("/webhook", async (req, res) => {
           userId,
           platform: "whatsapp",
           type: messageType,
+          businessId: phoneNumberId,
+          restaurantId: restaurantId,
+          restaurantName: restaurantName,
         };
 
         if (messageType === "text") {
