@@ -42,11 +42,11 @@ const StaffDashboard = () => {
   }, [fetchOrders]);
 
   // Auto-close popup after 5s
-  useEffect(() => {
-    if (!popupOrder) return;
-    const timer = setTimeout(() => setPopupOrder(null), 5000);
-    return () => clearTimeout(timer);
-  }, [popupOrder]);
+  // useEffect(() => {
+  //   if (!popupOrder) return;
+  //   const timer = setTimeout(() => setPopupOrder(null), 5000);
+  //   return () => clearTimeout(timer);
+  // }, [popupOrder]);
 
   // Memoized filtered and sorted orders
   const confirmed = useMemo(() => {
