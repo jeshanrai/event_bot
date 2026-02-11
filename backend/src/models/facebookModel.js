@@ -2,20 +2,38 @@ const db = require('../config/db');
 
 class FacebookCredentials {
     static async upsert(userId, restaurantId, { page_id, page_name, page_access_token }) {
-        const query = `
-            INSERT INTO facebook_credentials (user_id, restaurant_id, page_id, page_name, page_access_token)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (page_id) 
-            DO UPDATE SET 
-                page_name = EXCLUDED.page_name,
-                page_access_token = EXCLUDED.page_access_token,
-                is_active = true,
-                updated_at = NOW()
-            RETURNING *;
-        `;
-        const values = [userId, restaurantId, page_id, page_name, page_access_token];
-        const { rows } = await db.query(query, values);
-        return rows[0];
+        // Check if this restaurant already has a Facebook credential
+        const checkQuery = 'SELECT id FROM facebook_credentials WHERE restaurant_id = $1 LIMIT 1;';
+        const { rows: existingRows } = await db.query(checkQuery, [restaurantId]);
+
+        if (existingRows.length > 0) {
+            // Update the existing row for this restaurant
+            const updateQuery = `
+                UPDATE facebook_credentials 
+                SET 
+                    user_id = $1,
+                    page_id = $2,
+                    page_name = $3,
+                    page_access_token = $4,
+                    is_active = true,
+                    updated_at = NOW()
+                WHERE restaurant_id = $5
+                RETURNING *;
+            `;
+            const values = [userId, page_id, page_name, page_access_token, restaurantId];
+            const { rows } = await db.query(updateQuery, values);
+            return rows[0];
+        } else {
+            // Insert new row for this restaurant
+            const insertQuery = `
+                INSERT INTO facebook_credentials (user_id, restaurant_id, page_id, page_name, page_access_token)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING *;
+            `;
+            const values = [userId, restaurantId, page_id, page_name, page_access_token];
+            const { rows } = await db.query(insertQuery, values);
+            return rows[0];
+        }
     }
 
     static async findActive(userId) {
